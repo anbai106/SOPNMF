@@ -1,0 +1,9 @@
+################  Requirements for installation  ######################
+##### Requirements with Version Specifiers ######
+
+numpy==1.16.4
+scipy==1.3.0
+sklearn
+pandas
+nibabel
+
