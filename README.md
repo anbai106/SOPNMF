@@ -1,5 +1,5 @@
 # `pyOPNMF`
-**pyOPNMF** is the fast python implementation of the Orthogonal Projection Non-negative Matrix Factorization: [brainparts](https://github.com/asotiras/brainparts).Compared to the matlab implementation, pyOPNMF is much computationally faster with multi-threads implementation.
+**pyOPNMF** is the fast python implementation of the Orthogonal Projection Non-negative Matrix Factorization: [brainparts](https://github.com/asotiras/brainparts). Compared to the matlab implementation, pyOPNMF is much computationally faster with multi-threads implementation.
 
 ## Installation
 [Ananconda](https://www.anaconda.com/products/individual) allows you to install, run and update python package and their dependencies. We highly recommend the users to install **Anancond3** on your machine.
@@ -17,7 +17,7 @@ Install other python package dependencies (go to the root folder of pyOPNMF):
 ```
 3) pip install -r requirements.txt
 ```
-Finally, we need install pyOPNMF from PyPi (**Not yet avaible now**):
+Finally, we need install pyOPNMF from PyPi (**Not yet avaible now, but you can run the functions after step 3)**):
 ```
 3) pip install pyOPNMF==1.0.0
 ```
@@ -25,7 +25,7 @@ Finally, we need install pyOPNMF from PyPi (**Not yet avaible now**):
 ### Use pyOPNMF from commandline:
 To come soon.
 
-### Use pyOPNMF as a developer version (**Recommended now**):
+### Use pyOPNMF as a developer version:
 ```
 python -m pip install git+https://github.com/anbai106/pyOPNMF.git
 ```
