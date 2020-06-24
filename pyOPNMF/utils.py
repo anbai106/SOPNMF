@@ -156,10 +156,6 @@ def non_negative_double_SVD(X, num_component, init_method):
         [1] C. Boutsidis and E. Gallopoulos, SVD-based initialization: A head
         start for nonnegative matrix factorization, Pattern Recognition,
         Elsevier
-
-        This code is kindly provided by the authors for research porpuses.
-        - Efstratios Gallopoulos (stratis@ceid.upatras.gr)
-        - Christos Boutsidis (boutsc@cs.rpi.edu)
     """
     ## check the non-negativity of the input matrix A
     if np.sum(np.isneginf(X)) != 0:
