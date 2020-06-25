@@ -15,7 +15,7 @@ Activate the virtual environment:
 ```
 Install other python package dependencies (go to the root folder of pyOPNMF):
 ```
-3) pip install -r requirements.txt
+3) ./install_requirements.sh
 ```
 Finally, we need install pyOPNMF from PyPi (**Not yet avaible now, but you can run the functions after step 3)**):
 ```
