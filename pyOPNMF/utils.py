@@ -117,6 +117,8 @@ def opnmf_solver(X, output_dir, num_component, init_method, max_iter, tol, verbo
             pickle_out = open(os.path.join(component_path, "nmf_model.pickle"), "wb")
             pickle.dump(example_dict, pickle_out)
             pickle_out.close()
+            ## remove the intermediate model to save space
+            os.remove(os.path.join(component_path, "nmf_model_intermediate.pickle"))
             break
 
         later = time.time()
