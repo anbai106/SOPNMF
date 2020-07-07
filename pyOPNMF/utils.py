@@ -8,6 +8,8 @@ from scipy.optimize import linear_sum_assignment
 import pandas as pd
 import pickle, warnings
 import time
+from torch.utils.data import Dataset
+import torch
 
 __author__ = "Junhao Wen"
 __copyright__ = "Copyright 2019 The CBICA & SBIA Lab"
@@ -36,7 +38,6 @@ def opnmf_solver(X, output_dir, num_component, init_method, max_iter, tol, verbo
             H: expansion coefficients
     :reference: Sotiras, Aristeidis, Susan M. Resnick, and Christos Davatzikos. Finding imaging patterns of structural
     covariance via non-negative matrix factorization. NeuroImage 108 (2015): 1-16
-
     """
     ## define the saving frequency
     display_step = 1
@@ -141,6 +142,106 @@ def opnmf_solver(X, output_dir, num_component, init_method, max_iter, tol, verbo
     H_reordered = np.matmul(W.transpose(), X)
 
     return W, H, W_reordered, H_reordered
+
+def initialization_W(X, init_method, num_component):
+    """
+    Initialize the W matrix
+    :param X: matrix with size: num_features * num_subjects
+    :param init_method:
+    :param num_component:
+    :return: W
+    """
+    if init_method == 'Random':
+        print("random initialization ...")
+        W = np.random.rand(X.shape[0], num_component)
+    else:
+        print('variant NNDSVD initialization ...')
+        W, _ = non_negative_double_SVD(X, num_component, init_method)
+
+    return W
+
+def train_mini_batch(X, W, output_dir, num_component, num_iteration, metric_writer, verbose=False):
+    """"""
+
+    ## create the output_dir if not exist
+    component_path = os.path.join(output_dir, 'NMF', 'component_' + str(num_component))
+    if not os.path.exists(component_path):
+        os.makedirs(component_path)
+    ## update the model
+    W_old = W
+
+    ## multiplicative update rule, the update rule is slightly modified to account for the high dimensionality of the imaging data
+    W = np.divide(np.multiply(W, np.matmul(X, np.matmul(X.transpose(), W))), np.matmul(W, np.matmul(np.matmul(W.transpose(), X), np.matmul(X.transpose(), W))))
+
+    ## As the iterations were progressing, computational time per iteration was increasing due to operations involving really small values
+    W[W < 1e-16] = 1e-16
+    W = np.divide(W, norm(W, ord=2))
+    ## difference after iteration
+    diff_W = norm(W_old - W, 'fro') / norm(W_old, 'fro')
+    ## sparcity of W
+    ### the sparsity definition is referred from Hoyer 2004.
+    n = W.size
+    sparsity = np.divide(np.sqrt(n) - np.divide(np.sum(np.absolute(W)), np.sqrt(np.sum(np.square(W)))), np.sqrt(n) - 1)
+    ## Mini-batch loss
+    mini_batch_loss = norm(X - np.matmul(W, np.matmul(W.transpose(), X)), ord='fro')
+    ## Display for TensorboardX
+    metric_writer.add_scalar('diff_W', diff_W, num_iteration)
+    metric_writer.add_scalar('sparsity', sparsity, num_iteration)
+    metric_writer.add_scalar('mini_batch_loss', mini_batch_loss, num_iteration)
+    if verbose:
+        print("Iteration: %d ...\n" % num_iteration)
+        print("W difference %f  ...\n" % diff_W)
+        print("Mini-batch loss loss: %f  ...\n" % mini_batch_loss)
+        print("Sparsity: %f  ...\n" % sparsity)
+
+    return W
+
+class EarlyStopping(object):
+
+    """
+    This is a class to implement early stopping
+    The criterion here:
+        i) patience indicates how many epochs that the model could tolerate no loss decreasing
+        ii) min_delta gives the amplitude of loss decreasing for each epoch
+    """
+    def __init__(self, mode='loss', min_delta=0, patience_epoch=10):
+        self.mode = mode
+        self.min_delta = min_delta
+        self.patience = patience_epoch
+        self.best = None
+        self.num_bad_epochs = 0
+        self.is_better = None
+        self._init_is_better(mode, min_delta)
+
+        if patience_epoch == 0:
+            self.is_better = lambda a, b: True
+            self.step = lambda a: False
+
+    def step(self, metrics):
+        if self.best is None:
+            self.best = metrics
+            return False
+
+        if np.isnan(metrics):
+            return True
+
+        if self.is_better(metrics, self.best):
+            self.num_bad_epochs = 0
+            self.best = metrics
+        else:
+            self.num_bad_epochs += 1
+
+        if self.num_bad_epochs >= self.patience:
+            return True
+
+        return False
+
+    def _init_is_better(self, mode, min_delta):
+        if mode not in {'loss'}:
+            raise ValueError('mode ' + mode + ' is unknown!')
+
+        if mode == 'loss':
+            self.is_better = lambda a, best: a < best - best * min_delta
 
 def non_negative_double_SVD(X, num_component, init_method):
     """
@@ -654,3 +755,33 @@ def calculate_reproducibility_index(opnmf_output_dir, num_component_min, num_com
         ## write to tsv file
         df.to_csv(os.path.join(reproducibility_path_1, 'reproducibility_index.tsv'), index=False, sep='\t', encoding='utf-8')
 
+class MRIDataset(Dataset):
+    """Dataset of MRI"""
+
+    def __init__(self, participant_tsv, mask):
+        """
+        :param participant_tsv: str, path to the participant tsv
+        :param mask: predefined mask pickle file based on subpopulation for memory limitation
+        """
+        self._participant_tsv = participant_tsv
+        self._mask = mask
+        self._df = pd.read_csv(participant_tsv, sep='\t')
+        if ('participant_id' not in list(self._df.columns.values)) or (
+                'session_id' not in list(self._df.columns.values)) or \
+                ('path' not in list(self._df.columns.values)):
+            raise Exception("the data file is not in the correct format."
+                            "Columns should include ['participant_id', 'session_id', 'path']")
+
+    def __len__(self):
+        return len(self._df)
+
+    def __getitem__(self, idx):
+        img_name = self._df.loc[idx, 'participant_id']
+        sess_name = self._df.loc[idx, 'session_id']
+        image_path = self._df.loc[idx, 'path']
+        subj = nib.load(image_path)
+        image = np.nan_to_num(subj.get_data(caching='unchanged')).flatten().astype('float32')
+        image = image[self._mask] ## apply mask to single image, not to multiple image data[:, mask]
+        sample = {'image': image, 'participant_id': img_name, 'session_id': sess_name}
+
+        return sample
