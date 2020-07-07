@@ -18,12 +18,13 @@ __maintainer__ = "Junhao Wen"
 __email__ = "junhao.wen89@gmail.com"
 __status__ = "Development"
 
-def opnmf_solver(X, output_dir, num_component, init_method, max_iter, tol, verbose=False, approach='voxel'):
+def opnmf_solver(X, output_dir, num_component, metric_writer, init_method, max_iter, tol, verbose=False, approach='voxel'):
     """
     This is the orthogonal projective NMF implementation.
     :param X: input data matrix, with size num_features * num_subject
     :param output_dir: path to save the output and intermediate files
     :param num_component: number of components to extract for NMF
+    :param metric_writer: tensorboardX instance
     :param init_method: the initialization method,
     :param max_iter: maximum number of iterations
     :param tol: convergence tolerance
@@ -39,7 +40,6 @@ def opnmf_solver(X, output_dir, num_component, init_method, max_iter, tol, verbo
 
     """
     ## define the saving frequency
-    display_step = 1
     save_intermediate_step = 1000
     ## extract the shape of X
     num_features, num_subject = X.shape[0], X.shape[1]
@@ -62,14 +62,7 @@ def opnmf_solver(X, output_dir, num_component, init_method, max_iter, tol, verbo
         print('Retrain the model from last stop point: %d ...' % stop_iter)
     else:
         print('Train the model from scratch...')
-        if init_method == 'Random':
-            if verbose:
-                print("random initialization ...")
-            W = np.random.rand(num_features, num_component)
-        else:
-            if verbose:
-                print('variant NNDSVD initialization ...')
-            W, _ = non_negative_double_SVD(X, num_component, init_method)
+        W = initialization_W(X, init_method, num_component)
 
     ## start optimization
     for i in range(max_iter):
@@ -88,23 +81,21 @@ def opnmf_solver(X, output_dir, num_component, init_method, max_iter, tol, verbo
 
         ## difference after iteration
         diff_W = norm(W_old - W, 'fro') / norm(W_old, 'fro')
+        loss = norm(X - np.matmul(W, np.matmul(W.transpose(), X)), ord='fro')
+        ### the sparsity definition is referred from Hoyer 2004.
+        n = W.size
+        sparsity = np.divide(np.sqrt(n) - np.divide(np.sum(np.absolute(W)), np.sqrt(np.sum(np.square(W)))), np.sqrt(n) - 1)
 
-        if verbose:
-        ## display the output based on the check step
-            if i % display_step == 0 and i != 0:
-                print("Iteration: %d ...\n" % i)
-                print("W difference, corresponding to the predefined tolerance: %f  ...\n" % diff_W)
-                print("Objective loss: %f  ...\n" % norm(X - np.matmul(W, np.matmul(W.transpose(), X)), ord='fro'))
-                ### the sparsity definition is referred from Hoyer 2004.
-                n = W.size
-                sparsity = np.divide(np.sqrt(n) - np.divide(np.sum(np.absolute(W)), np.sqrt(np.sum(np.square(W)))), np.sqrt(n) - 1)
-                print("Sparsity: %f  ...\n" % sparsity)
+        ## write to tensorboardX
+        metric_writer.add_scalar('diff_W', diff_W, i)
+        metric_writer.add_scalar('loss', loss, i)
+        metric_writer.add_scalar('sparsity', sparsity, i)
 
         ## save intermediate results
         if i % save_intermediate_step == 0 and i != 0:
-            example_dict = {'iter': i, 'num_subject': num_subject, 'num_component': num_component, 'W': W, 'H': np.matmul(W.transpose(), X)}
+            data_dict = {'iter': i, 'num_subject': num_subject, 'num_component': num_component, 'W': W}
             pickle_out = open(os.path.join(component_path, "nmf_model_intermediate.pickle"), "wb")
-            pickle.dump(example_dict, pickle_out)
+            pickle.dump(data_dict, pickle_out)
             pickle_out.close()
 
         #### save the model only under convergence
@@ -113,9 +104,9 @@ def opnmf_solver(X, output_dir, num_component, init_method, max_iter, tol, verbo
                 print("Save the model at %d iterations ...\n" % (i))
                 ## save final results only after it's converged
                 print('Saving final results ...\n')
-            example_dict = {'iter': i, 'num_subject': num_subject, 'num_component': num_component, 'W': W, 'H': np.matmul(W.transpose(), X)}
+            data_dict = {'iter': i, 'num_subject': num_subject, 'num_component': num_component, 'W': W}
             pickle_out = open(os.path.join(component_path, "nmf_model.pickle"), "wb")
-            pickle.dump(example_dict, pickle_out)
+            pickle.dump(data_dict, pickle_out)
             pickle_out.close()
             ## remove the intermediate model to save space
             os.remove(os.path.join(component_path, "nmf_model_intermediate.pickle"))
@@ -135,7 +126,7 @@ def opnmf_solver(X, output_dir, num_component, init_method, max_iter, tol, verbo
         H_len[H_len == 0] = 1
 
     W_H_len = np.multiply(W, H_len.transpose())
-    ## order by W
+    ## order by W by energy
     index_descend = (-np.sum(np.square(W_H_len), 0)).argsort()
     W_reordered = W[:, index_descend]
     H_reordered = np.matmul(W.transpose(), X)
@@ -470,14 +461,10 @@ def save_components_as_nifti(X, example_img, data_mask, orig_shape, output_dir, 
         B[:, i] = data.flatten().transpose()
         component_to_nifti(data, example_img, output_filename)
 
-    ## new loading coefficient
-    C = np.matmul(B.transpose(), X)
-
     ## save the original B and C
-    example_dict = {'B': B,
-                    'C': C}
+    data_dict = {'B': B}
     pickle_out = open(os.path.join(output_dir, 'NMF', 'component_' + str(num_component), "nmf_model_without_masking.pickle"), "wb")
-    pickle.dump(example_dict, pickle_out)
+    pickle.dump(data_dict, pickle_out)
     pickle_out.close()
 
 def revert_mask(component, mask, shape):
@@ -584,6 +571,23 @@ def save_loading_coefficient(X, participant_tsv, output_dir, num_component, suff
         df.to_csv(os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'loading_coefficient.tsv'), index=False, sep='\t', encoding='utf-8')
     else:
         df.to_csv(os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'loading_coefficient_' + suffix + '.tsv'), index=False, sep='\t', encoding='utf-8')
+
+def initialization_W(X, init_method, num_component):
+    """
+    Initialize the W matrix
+    :param X: matrix with size: num_features * num_subjects
+    :param init_method:
+    :param num_component:
+    :return: W
+    """
+    if init_method == 'Random':
+        print("random initialization ...")
+        W = np.random.rand(X.shape[0], num_component)
+    else:
+        print('variant NNDSVD initialization ...')
+        W, _ = non_negative_double_SVD(X, num_component, init_method)
+
+    return W
 
 def calculate_reproducibility_index(opnmf_output_dir, num_component_min, num_component_max, num_component_step):
     """

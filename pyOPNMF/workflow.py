@@ -4,6 +4,7 @@ from .base import VB_Input
 import os, shutil
 import pickle
 from multiprocessing.pool import ThreadPool
+from tensorboardX import SummaryWriter
 
 __author__ = "Junhao Wen"
 __copyright__ = "Copyright 2019 The CBICA & SBIA Lab"
@@ -56,6 +57,12 @@ class VB_OPNMF(WorkFlow):
         for i in c_list:
             async_result[i] = {}
 
+        log_dir = os.path.join(self._output_dir, "log_dir")
+        print("Online monitoring the training, please run tensorboard --logdir LOG_DIR in your terminal : %s" % log_dir)
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        metric_writer = SummaryWriter(log_dir=log_dir)
+
         ## apply the model from here with multithreads
         pool = ThreadPool(self._n_threads)
         for num_component in c_list:
@@ -65,8 +72,9 @@ class VB_OPNMF(WorkFlow):
             else:
                 if self._verbose:
                     print("Train OPNMF for %d components" % num_component)
-                async_result[num_component] = pool.apply_async(opnmf_solver, args=(X.transpose(), self._output_dir, num_component,
-                                                                       self._init_method, self._max_iter, self._tol, self._verbose))
+                async_result[num_component] = pool.apply_async(opnmf_solver, args=(X.transpose(), self._output_dir,
+                                                                num_component, metric_writer, self._init_method,
+                                                                self._max_iter, self._tol, self._verbose))
         pool.close()
         pool.join()
 
