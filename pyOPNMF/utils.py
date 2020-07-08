@@ -9,7 +9,6 @@ import pandas as pd
 import pickle, warnings
 import time
 from torch.utils.data import Dataset
-import torch
 
 __author__ = "Junhao Wen"
 __copyright__ = "Copyright 2019 The CBICA & SBIA Lab"
