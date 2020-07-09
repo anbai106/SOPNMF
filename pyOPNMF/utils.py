@@ -18,7 +18,8 @@ __maintainer__ = "Junhao Wen"
 __email__ = "junhao.wen89@gmail.com"
 __status__ = "Development"
 
-def opnmf_solver(X, output_dir, num_component, metric_writer, init_method, max_iter, tol, verbose=False, approach='voxel'):
+def opnmf_solver(X, output_dir, num_component, metric_writer, init_method, max_iter, magnitude_tolerance=0,
+                 early_stopping_epoch=20, verbose=False, approach='voxel'):
     """
     This is the orthogonal projective NMF implementation.
     :param X: input data matrix, with size num_features * num_subject
@@ -27,7 +28,8 @@ def opnmf_solver(X, output_dir, num_component, metric_writer, init_method, max_i
     :param metric_writer: tensorboardX instance
     :param init_method: the initialization method,
     :param max_iter: maximum number of iterations
-    :param tol: convergence tolerance
+    :param magnitude_tolerance: float, the tolerance of loss change magnitude
+    :param early_stopping_epoch: int, the tolerance of number of bad epochs for early stopping
     :param iter_intermediate: initial iteration (used when resuming optimization after
               possible failure - use in combination with saved intermediate results)
     :param approach: default is voxel-wise for high dimensional data, otherwise roi for low dimensional data. Depending on
@@ -64,6 +66,9 @@ def opnmf_solver(X, output_dir, num_component, metric_writer, init_method, max_i
         print('Train the model from scratch...')
         W = initialization_W(X, init_method, num_component)
 
+    # initialize the early stopping instance
+    early_stopping = EarlyStopping('loss', min_delta=magnitude_tolerance, patience_epoch=early_stopping_epoch)
+
     ## start optimization
     for i in range(max_iter):
         now = time.time()
@@ -93,18 +98,16 @@ def opnmf_solver(X, output_dir, num_component, metric_writer, init_method, max_i
 
         ## save intermediate results
         if i % save_intermediate_step == 0 and i != 0:
-            data_dict = {'iter': i, 'num_subject': num_subject, 'num_component': num_component, 'W': W}
+            data_dict = {'iter': i, 'num_component': num_component, 'W': W}
             pickle_out = open(os.path.join(component_path, "nmf_model_intermediate.pickle"), "wb")
             pickle.dump(data_dict, pickle_out)
             pickle_out.close()
 
-        #### save the model only under convergence
-        if diff_W < tol:
-            if verbose:
-                print("Save the model at %d iterations ...\n" % (i))
-                ## save final results only after it's converged
-                print('Saving final results ...\n')
-            data_dict = {'iter': i, 'num_subject': num_subject, 'num_component': num_component, 'W': W}
+        ## try early stopping criterion
+        if early_stopping.step(loss) or i == max_iter - 1:
+            print(
+                "By applying early stopping or at the last epoch defnied by user, the model should be stopped training at %d-th epoch" % i)
+            data_dict = {'iter': i, 'num_component': num_component, 'W': W}
             pickle_out = open(os.path.join(component_path, "nmf_model.pickle"), "wb")
             pickle.dump(data_dict, pickle_out)
             pickle_out.close()
@@ -461,8 +464,12 @@ def save_components_as_nifti(X, example_img, data_mask, orig_shape, output_dir, 
         B[:, i] = data.flatten().transpose()
         component_to_nifti(data, example_img, output_filename)
 
+    ## new loading coefficient
+    C = np.matmul(B.transpose(), X)
+
     ## save the original B and C
-    data_dict = {'B': B}
+    data_dict = {'B': B,
+                 'C': C}
     pickle_out = open(os.path.join(output_dir, 'NMF', 'component_' + str(num_component), "nmf_model_without_masking.pickle"), "wb")
     pickle.dump(data_dict, pickle_out)
     pickle_out.close()
@@ -588,6 +595,53 @@ def initialization_W(X, init_method, num_component):
         W, _ = non_negative_double_SVD(X, num_component, init_method)
 
     return W
+
+class EarlyStopping(object):
+
+    """
+    This is a class to implement early stopping
+    The criterion here:
+        i) patience indicates how many epochs that the model could tolerate no loss decreasing
+        ii) min_delta gives the amplitude of loss decreasing for each epoch
+    """
+    def __init__(self, mode='loss', min_delta=0, patience_epoch=10):
+        self.mode = mode
+        self.min_delta = min_delta
+        self.patience = patience_epoch
+        self.best = None
+        self.num_bad_epochs = 0
+        self.is_better = None
+        self._init_is_better(mode, min_delta)
+
+        if patience_epoch == 0:
+            self.is_better = lambda a, b: True
+            self.step = lambda a: False
+
+    def step(self, metrics):
+        if self.best is None:
+            self.best = metrics
+            return False
+
+        if np.isnan(metrics):
+            return True
+
+        if self.is_better(metrics, self.best):
+            self.num_bad_epochs = 0
+            self.best = metrics
+        else:
+            self.num_bad_epochs += 1
+
+        if self.num_bad_epochs >= self.patience:
+            return True
+
+        return False
+
+    def _init_is_better(self, mode, min_delta):
+        if mode not in {'loss'}:
+            raise ValueError('mode ' + mode + ' is unknown!')
+
+        if mode == 'loss':
+            self.is_better = lambda a, best: a < best - best * min_delta
 
 def calculate_reproducibility_index(opnmf_output_dir, num_component_min, num_component_max, num_component_step):
     """

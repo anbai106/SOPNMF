@@ -1,5 +1,5 @@
 from .base import WorkFlow
-from .utils import save_components_as_nifti, reconstruction_error, opnmf_solver, save_loading_coefficient
+from .utils import save_components_as_nifti, reconstruction_error, opnmf_solver, save_loading_coefficient, EarlyStopping
 from .base import VB_Input
 import os, shutil
 import pickle
@@ -21,7 +21,8 @@ class VB_OPNMF(WorkFlow):
     """
 
     def __init__(self, output_dir, participant_tsv, num_component_min, num_component_max, num_component_step,
-                 init_method='NNDSVD', max_iter=50000, tolerance=1e-5, n_threads=8, verbose=False):
+                 init_method='NNDSVD', max_iter=50000, magnitude_tolerance=0, early_stopping_epoch=20, n_threads=8,
+                 verbose=False):
 
         self._output_dir = output_dir
         self._participant_tsv = participant_tsv
@@ -30,7 +31,8 @@ class VB_OPNMF(WorkFlow):
         self._num_component_step = num_component_step
         self._init_method = init_method
         self._max_iter = max_iter
-        self._tol = tolerance
+        self._magnitude_tolerance = magnitude_tolerance
+        self._early_stopping_epoch = early_stopping_epoch
         self._n_threads = n_threads
         self._verbose = verbose
 
@@ -74,7 +76,8 @@ class VB_OPNMF(WorkFlow):
                     print("Train OPNMF for %d components" % num_component)
                 async_result[num_component] = pool.apply_async(opnmf_solver, args=(X.transpose(), self._output_dir,
                                                                 num_component, metric_writer, self._init_method,
-                                                                self._max_iter, self._tol, self._verbose))
+                                                                self._max_iter, self._magnitude_tolerance,
+                                                                self._early_stopping_epoch, self._verbose))
         pool.close()
         pool.join()
 
