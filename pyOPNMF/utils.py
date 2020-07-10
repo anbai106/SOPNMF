@@ -9,6 +9,8 @@ import pandas as pd
 import pickle, warnings
 import time
 from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
+from multiprocessing.pool import ThreadPool
 
 __author__ = "Junhao Wen"
 __copyright__ = "Copyright 2019 The CBICA & SBIA Lab"
@@ -159,8 +161,18 @@ def initialization_W(X, init_method, num_component):
 
     return W
 
-def train_mini_batch(X, W, output_dir, num_component, num_iteration, metric_writer, verbose=False):
-    """"""
+def opnmf_solver_mini_batch(X, W, output_dir, num_component, num_iteration, metric_writer, verbose=False):
+    """
+    OPNMF solver for mini batch training
+    :param X:
+    :param W:
+    :param output_dir:
+    :param num_component:
+    :param num_iteration:
+    :param metric_writer:
+    :param verbose:
+    :return:
+    """
 
     ## create the output_dir if not exist
     component_path = os.path.join(output_dir, 'NMF', 'component_' + str(num_component))
@@ -194,6 +206,77 @@ def train_mini_batch(X, W, output_dir, num_component, num_iteration, metric_writ
         print("Sparsity: %f  ...\n" % sparsity)
 
     return W
+
+def train(W, dataset, batch_size, n_threads, num_epoch, output_dir, num_component, metric_writer, verbose=True):
+    """
+    Function to train the model in mini-batch mode
+    :param W: numpy array
+    :param dataset: a dataset instance of pytorch
+    :param batch_size: int, batch size
+    :param n_threads: int, number of cpus to use
+    :param num_epoch: int, number of the current epoch
+    :param output_dir: str, output dir
+    :param num_component: int, number of C
+    :param metric_writer: an instance of Tensorboard SummaryWriter
+    :param num_iteration: int, depending on if the model is trained from scratch, or from intermediate step.
+    :param verbose: bool.
+    :return:
+    """
+    dataloader_train = DataLoader(dataset,
+                                  batch_size=batch_size,
+                                  shuffle=True,
+                                  num_workers=n_threads,
+                                  drop_last=True)
+
+    t0 = time.time()
+    ## apply the model from here with multithreads
+    pool = ThreadPool(n_threads)
+    for j, batch_data in enumerate(dataloader_train):
+        t1 = time.time()
+        print("Loading mini-batch data on CPU using time: ", t1 - t0)
+        imgs_mini_batch = batch_data['image'].data.numpy()
+        num_iteration_current = num_epoch * len(dataloader_train) + j
+
+        results = pool.apply_async(opnmf_solver_mini_batch, args=(imgs_mini_batch.transpose(), W,
+                                                                  output_dir, num_component,
+                                                                  num_iteration_current, metric_writer, verbose))
+        W = results.get()
+    pool.close()
+    pool.join()
+
+    return W, num_iteration_current
+
+
+def validate(W, dataset, batch_size, n_threads, num_iteration, metric_writer):
+    """
+    FUnction to validate the model with whole dataset
+    :param W: numpy array
+    :param dataset: a dataset instance of pytorch
+    :param batch_size: int, batch size
+    :param n_threads: int, number of cpus to use
+    :param num_iteration: int, the current iteration at the end of each epoch
+    :param metric_writer: an instance of Tensorboard SummaryWriter
+    :return:
+    """
+    ### This is used for evaluate the reconstruction loss
+    dataloader_valid = DataLoader(dataset,
+                                  batch_size=batch_size,
+                                  shuffle=False,
+                                  num_workers=n_threads,
+                                  drop_last=False)
+
+    validate_loss_square = 0
+    ## At the end of each epoch, evaluate the reconsruction based on all data.
+    for k, batch_data in enumerate(dataloader_valid):
+        imgs_mini_batch = batch_data['image'].data.numpy()
+        mini_batch_loss_sqrt = np.sum(np.square(
+            imgs_mini_batch.transpose() - np.matmul(W, np.matmul(W.transpose(), imgs_mini_batch.transpose()))))
+        validate_loss_square += mini_batch_loss_sqrt
+    validate_loss = np.sqrt(validate_loss_square)
+    ## write to tensorboardX
+    metric_writer.add_scalar('batch_loss', validate_loss, num_iteration)
+
+    return validate_loss
 
 class EarlyStopping(object):
 
@@ -784,3 +867,12 @@ class MRIDataset(Dataset):
         sample = {'image': image, 'participant_id': img_name, 'session_id': sess_name}
 
         return sample
+
+def folder_not_exist_to_create(path):
+    """
+    Check if folder exist, if not, create it
+    :param path: str
+    :return:
+    """
+    if not os.path.exists(path):
+        os.makedirs(path)

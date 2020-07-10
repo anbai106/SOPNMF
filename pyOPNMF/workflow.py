@@ -1,14 +1,11 @@
 from .base import WorkFlow
-from .utils import save_components_as_nifti, reconstruction_error, train_mini_batch, save_loading_coefficient, \
-    MRIDataset, initialization_W, EarlyStopping
-from .base import VB_Input
+from .utils import save_components_as_nifti, reconstruction_error, train, validate, save_loading_coefficient, MRIDataset, \
+    initialization_W, EarlyStopping, folder_not_exist_to_create
 import os, shutil
 import pickle
-from multiprocessing.pool import ThreadPool
-from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
+from .base import VB_Input
 import numpy as np
-from scipy.linalg import norm
 
 __author__ = "Junhao Wen"
 __copyright__ = "Copyright 2019 The CBICA & SBIA Lab"
@@ -42,81 +39,63 @@ class VB_OPNMF_mini_batch(WorkFlow):
         self._verbose = verbose
 
     def run(self):
-        ## define the output structure
         tsv_path = os.path.join(self._output_dir, 'NMF')
-        if not os.path.exists(tsv_path):
-            os.makedirs(tsv_path)
+        log_dir = os.path.join(self._output_dir, "log_dir")
+        folder_not_exist_to_create(tsv_path)
+        folder_not_exist_to_create(log_dir)
         ## cp the participant tsv for recording
         shutil.copyfile(self._participant_tsv, os.path.join(tsv_path, 'participant.tsv'))
-
-        ### create the mask
         VB_data = VB_Input(self._participant_tsv_max_memory, self._output_dir, self._verbose)
         ## X size is: num_subjects * num_features
-        X_max, orig_shape, data_mask = VB_data.get_x()
+        X_max, _, data_mask = VB_data.get_x()
         ### save data mask for applying the model to unseen data.
         mask_dict = {'mask': data_mask}
         pickle_out = open(os.path.join(self._output_dir, 'NMF', "data_mask.pickle"), "wb")
         pickle.dump(mask_dict, pickle_out)
         pickle_out.close()
 
-        data_mini_batch = MRIDataset(self._participant_tsv, data_mask)
-        dataloader_train = DataLoader(data_mini_batch,
-                                  batch_size=self._batch_size,
-                                  shuffle=True,
-                                  num_workers=self._n_threads,
-                                  drop_last=True)
-
-        ### This is used for evaluate the reconstruction loss
-        dataloader_valid = DataLoader(data_mini_batch,
-                                  batch_size=self._batch_size,
-                                  shuffle=False,
-                                  num_workers=self._n_threads,
-                                  drop_last=False)
-
-        log_dir = os.path.join(self._output_dir, "log_dir")
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+        dataset = MRIDataset(self._participant_tsv, data_mask)
         metric_writer = SummaryWriter(log_dir=log_dir)
-
-        print("Start training online OPNMF")
-        print('The number of batches in this sampler based on the batch size: %s' % str(len(dataloader_train)))
         c_list = list(range(self._num_component_min, self._num_component_max + self._num_component_step,
                             self._num_component_step))
+        best_loss_valid = np.inf
 
-        ## apply the model from here with multithreads
-        pool = ThreadPool(self._n_threads)
         for num_component in c_list:
             ### check if the model has been trained to be converged.
             if os.path.exists(os.path.join(self._output_dir, 'NMF', 'component_' + str(num_component), "nmf_model.pickle")):
                 print("This number of components have been trained and converged: %d" % num_component)
             else:
-                print("Train OPNMF for %d components" % num_component)
-                ## initialization.
-                W = initialization_W(X_max.transpose(), self._init_method, num_component)
                 # initialize the early stopping instance
                 early_stopping = EarlyStopping('loss', min_delta=0, patience_epoch=self._early_stopping_epoch)
+                component_path = os.path.join(self._output_dir, 'NMF', 'component_' + str(num_component))
+                print("Train OPNMF for %d components" % num_component)
+                ### check if the intermediate model exist, if yes, no need to initialize the W matrix
+                if os.path.exists(os.path.join(component_path, "nmf_model_intermediate.pickle")):
+                    intermediate_model_path = os.path.join(component_path, "nmf_model_intermediate.pickle")
+                    file = open(intermediate_model_path, 'rb')
+                    # dump information to that file
+                    data = pickle.load(file)
+                    W = data['W']
+                    file.close()
+                else:
+                    ## initialization.
+                    W = initialization_W(X_max.transpose(), self._init_method, num_component)
 
                 for i in range(self._max_epoch):
-                    import time
-                    t0 = time.time()
-                    for j, batch_data in enumerate(dataloader_train):
-                        t1 = time.time()
-                        print("Loading mini-batch data on CPU using time: ", t1 - t0)
-                        imgs_mini_batch = batch_data['image'].data.numpy()
-                        num_iteration = i * len(dataloader_train) + j
+                    W, num_iteration = train(W, dataset, self._batch_size, self._n_threads, i, self._output_dir,
+                                                   num_component, metric_writer, verbose=self._verbose)
 
-                        results = pool.apply_async(train_mini_batch, args=(imgs_mini_batch.transpose(), W,
-                                                                                  self._output_dir, num_component,
-                                                                                  num_iteration, metric_writer, self._verbose))
-                        W = results.get()
-                    validate_loss = 0
-                    ## At the end of each epoch, evaluate the reconsruction based on all data.
-                    for k, batch_data in enumerate(dataloader_valid):
-                        imgs_mini_batch = batch_data['image'].data.numpy()
-                        mini_batch_loss = norm(imgs_mini_batch.transpose() - np.matmul(W, np.matmul(W.transpose(), imgs_mini_batch.transpose())), ord='fro')
-                        validate_loss +=mini_batch_loss
-                    ## write to tensorboardX
-                    metric_writer.add_scalar('batch_loss', validate_loss, num_iteration)
+                    validate_loss = validate(W, dataset, self._batch_size, self._n_threads, num_iteration, metric_writer)
+
+                    # save the best model based on the best loss
+                    is_best = validate_loss < best_loss_valid
+                    if is_best:
+                        best_loss_valid = min(validate_loss, best_loss_valid)
+                        data_dict = {'iter': num_iteration, 'num_component': num_component, 'W': W}
+                        pickle_out = open(os.path.join(self._output_dir, 'NMF', 'component_' + str(num_component),
+                                                       "nmf_model_intermediate.pickle"), "wb")
+                        pickle.dump(data_dict, pickle_out)
+                        pickle_out.close()
 
                     ## try early stopping criterion
                     if early_stopping.step(validate_loss) or i == self._max_epoch - 1:
@@ -125,10 +104,9 @@ class VB_OPNMF_mini_batch(WorkFlow):
                         pickle_out = open(os.path.join(self._output_dir, 'NMF', 'component_' + str(num_component), "nmf_model.pickle"), "wb")
                         pickle.dump(data_dict, pickle_out)
                         pickle_out.close()
+                        ## remove the intermediate model to save space
+                        os.remove(os.path.join(component_path, "nmf_model_intermediate.pickle"))
                         break
-        pool.close()
-        pool.join()
-
 
 class Post_OPNMF(WorkFlow):
     """

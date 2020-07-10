@@ -10,7 +10,7 @@ __email__ = "junhao.wen89@gmail.com"
 __status__ = "Development"
 
 def train_mini_batch(participant_tsv, participant_tsv_max_memory, output_dir, num_component_min, num_component_max,
-                     num_component_step=1, batch_size=200, max_epoch=10000, init_method='NNDSVDRandomSVD', early_stopping_epoch=10,
+                     num_component_step=1, batch_size=200, max_epoch=50000, init_method='NNDSVDRandomSVD', early_stopping_epoch=100,
                      n_threads=8, verbose=False):
     """
     Train OPNMF from voxel-wise image, trained by mini-batch online learning
