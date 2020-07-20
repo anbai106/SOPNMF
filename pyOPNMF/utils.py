@@ -8,6 +8,9 @@ from scipy.optimize import linear_sum_assignment
 import pandas as pd
 import pickle, warnings
 import time
+from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
+from multiprocessing.pool import ThreadPool
 
 __author__ = "Junhao Wen"
 __copyright__ = "Copyright 2019 The CBICA & SBIA Lab"
@@ -135,6 +138,170 @@ def opnmf_solver(X, output_dir, num_component, metric_writer, init_method, max_i
     H_reordered = np.matmul(W.transpose(), X)
 
     return W, H, W_reordered, H_reordered
+
+def opnmf_solver_mini_batch(X, W, output_dir, num_component, num_iteration, metric_writer, verbose=False):
+    """
+    OPNMF solver for mini batch training
+    :param X:
+    :param W:
+    :param output_dir:
+    :param num_component:
+    :param num_iteration:
+    :param metric_writer:
+    :param verbose:
+    :return:
+    """
+
+    ## create the output_dir if not exist
+    component_path = os.path.join(output_dir, 'NMF', 'component_' + str(num_component))
+    if not os.path.exists(component_path):
+        os.makedirs(component_path)
+    ## update the model
+    W_old = W
+
+    ## multiplicative update rule, the update rule is slightly modified to account for the high dimensionality of the imaging data
+    W = np.divide(np.multiply(W, np.matmul(X, np.matmul(X.transpose(), W))), np.matmul(W, np.matmul(np.matmul(W.transpose(), X), np.matmul(X.transpose(), W))))
+
+    ## As the iterations were progressing, computational time per iteration was increasing due to operations involving really small values
+    W[W < 1e-16] = 1e-16
+    W = np.divide(W, norm(W, ord=2))
+    ## difference after iteration
+    diff_W = norm(W_old - W, 'fro') / norm(W_old, 'fro')
+    ## sparcity of W
+    ### the sparsity definition is referred from Hoyer 2004.
+    n = W.size
+    sparsity = np.divide(np.sqrt(n) - np.divide(np.sum(np.absolute(W)), np.sqrt(np.sum(np.square(W)))), np.sqrt(n) - 1)
+    ## Mini-batch loss
+    mini_batch_loss = norm(X - np.matmul(W, np.matmul(W.transpose(), X)), ord='fro')
+    ## Display for TensorboardX
+    metric_writer.add_scalar('diff_W', diff_W, num_iteration)
+    metric_writer.add_scalar('sparsity', sparsity, num_iteration)
+    metric_writer.add_scalar('mini_batch_loss', mini_batch_loss, num_iteration)
+    if verbose:
+        print("Iteration: %d ...\n" % num_iteration)
+        print("W difference %f  ...\n" % diff_W)
+        print("Mini-batch loss loss: %f  ...\n" % mini_batch_loss)
+        print("Sparsity: %f  ...\n" % sparsity)
+
+    return W
+
+def train(W, dataset, batch_size, n_threads, num_epoch, output_dir, num_component, metric_writer, verbose=True):
+    """
+    Function to train the model in mini-batch mode
+    :param W: numpy array
+    :param dataset: a dataset instance of pytorch
+    :param batch_size: int, batch size
+    :param n_threads: int, number of cpus to use
+    :param num_epoch: int, number of the current epoch
+    :param output_dir: str, output dir
+    :param num_component: int, number of C
+    :param metric_writer: an instance of Tensorboard SummaryWriter
+    :param num_iteration: int, depending on if the model is trained from scratch, or from intermediate step.
+    :param verbose: bool.
+    :return:
+    """
+    dataloader_train = DataLoader(dataset,
+                                  batch_size=batch_size,
+                                  shuffle=True,
+                                  num_workers=n_threads,
+                                  drop_last=True)
+
+    t0 = time.time()
+    ## apply the model from here with multithreads
+    pool = ThreadPool(n_threads)
+    for j, batch_data in enumerate(dataloader_train):
+        t1 = time.time()
+        print("Loading mini-batch data on CPU using time: ", t1 - t0)
+        imgs_mini_batch = batch_data['image'].data.numpy()
+        num_iteration_current = num_epoch * len(dataloader_train) + j
+
+        results = pool.apply_async(opnmf_solver_mini_batch, args=(imgs_mini_batch.transpose(), W,
+                                                                  output_dir, num_component,
+                                                                  num_iteration_current, metric_writer, verbose))
+        W = results.get()
+    pool.close()
+    pool.join()
+
+    return W, num_iteration_current
+
+
+def validate(W, dataset, batch_size, n_threads, num_iteration, metric_writer):
+    """
+    FUnction to validate the model with whole dataset
+    :param W: numpy array
+    :param dataset: a dataset instance of pytorch
+    :param batch_size: int, batch size
+    :param n_threads: int, number of cpus to use
+    :param num_iteration: int, the current iteration at the end of each epoch
+    :param metric_writer: an instance of Tensorboard SummaryWriter
+    :return:
+    """
+    ### This is used for evaluate the reconstruction loss
+    dataloader_valid = DataLoader(dataset,
+                                  batch_size=batch_size,
+                                  shuffle=False,
+                                  num_workers=n_threads,
+                                  drop_last=False)
+
+    validate_loss_square = 0
+    ## At the end of each epoch, evaluate the reconsruction based on all data.
+    for k, batch_data in enumerate(dataloader_valid):
+        imgs_mini_batch = batch_data['image'].data.numpy()
+        mini_batch_loss_sqrt = np.sum(np.square(
+            imgs_mini_batch.transpose() - np.matmul(W, np.matmul(W.transpose(), imgs_mini_batch.transpose()))))
+        validate_loss_square += mini_batch_loss_sqrt
+    validate_loss = np.sqrt(validate_loss_square)
+    ## write to tensorboardX
+    metric_writer.add_scalar('batch_loss', validate_loss, num_iteration)
+
+    return validate_loss
+
+class EarlyStopping(object):
+
+    """
+    This is a class to implement early stopping
+    The criterion here:
+        i) patience indicates how many epochs that the model could tolerate no loss decreasing
+        ii) min_delta gives the amplitude of loss decreasing for each epoch
+    """
+    def __init__(self, mode='loss', min_delta=0, patience_epoch=10):
+        self.mode = mode
+        self.min_delta = min_delta
+        self.patience = patience_epoch
+        self.best = None
+        self.num_bad_epochs = 0
+        self.is_better = None
+        self._init_is_better(mode, min_delta)
+
+        if patience_epoch == 0:
+            self.is_better = lambda a, b: True
+            self.step = lambda a: False
+
+    def step(self, metrics):
+        if self.best is None:
+            self.best = metrics
+            return False
+
+        if np.isnan(metrics):
+            return True
+
+        if self.is_better(metrics, self.best):
+            self.num_bad_epochs = 0
+            self.best = metrics
+        else:
+            self.num_bad_epochs += 1
+
+        if self.num_bad_epochs >= self.patience:
+            return True
+
+        return False
+
+    def _init_is_better(self, mode, min_delta):
+        if mode not in {'loss'}:
+            raise ValueError('mode ' + mode + ' is unknown!')
+
+        if mode == 'loss':
+            self.is_better = lambda a, best: a < best - best * min_delta
 
 def non_negative_double_SVD(X, num_component, init_method):
     """
@@ -711,4 +878,44 @@ def calculate_reproducibility_index(opnmf_output_dir, num_component_min, num_com
                           'median_index': [median_inner_product]})
         ## write to tsv file
         df.to_csv(os.path.join(reproducibility_path_1, 'reproducibility_index.tsv'), index=False, sep='\t', encoding='utf-8')
+
+class MRIDataset(Dataset):
+    """Dataset of MRI"""
+
+    def __init__(self, participant_tsv, mask):
+        """
+        :param participant_tsv: str, path to the participant tsv
+        :param mask: predefined mask pickle file based on subpopulation for memory limitation
+        """
+        self._participant_tsv = participant_tsv
+        self._mask = mask
+        self._df = pd.read_csv(participant_tsv, sep='\t')
+        if ('participant_id' not in list(self._df.columns.values)) or (
+                'session_id' not in list(self._df.columns.values)) or \
+                ('path' not in list(self._df.columns.values)):
+            raise Exception("the data file is not in the correct format."
+                            "Columns should include ['participant_id', 'session_id', 'path']")
+
+    def __len__(self):
+        return len(self._df)
+
+    def __getitem__(self, idx):
+        img_name = self._df.loc[idx, 'participant_id']
+        sess_name = self._df.loc[idx, 'session_id']
+        image_path = self._df.loc[idx, 'path']
+        subj = nib.load(image_path)
+        image = np.nan_to_num(subj.get_data(caching='unchanged')).flatten().astype('float32')
+        image = image[self._mask] ## apply mask to single image, not to multiple image data[:, mask]
+        sample = {'image': image, 'participant_id': img_name, 'session_id': sess_name}
+
+        return sample
+
+def folder_not_exist_to_create(path):
+    """
+    Check if folder exist, if not, create it
+    :param path: str
+    :return:
+    """
+    if not os.path.exists(path):
+        os.makedirs(path)
 
