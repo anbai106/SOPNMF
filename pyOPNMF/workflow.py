@@ -122,12 +122,17 @@ class VB_OPNMF_mini_batch(WorkFlow):
         pickle_out.close()
 
         dataset = MRIDataset(self._participant_tsv, data_mask)
-        metric_writer = SummaryWriter(log_dir=log_dir)
         c_list = list(range(self._num_component_min, self._num_component_max + self._num_component_step,
                             self._num_component_step))
         best_loss_valid = np.inf
 
         for num_component in c_list:
+            ## define log dir
+            log_dir = os.path.join(self._output_dir, 'log_dir', 'component_' + str(num_component))
+            if not os.path.exists(log_dir):
+                os.makedirs(log_dir)
+            metric_writer = SummaryWriter(log_dir=log_dir)
+
             ### check if the model has been trained to be converged.
             if os.path.exists(os.path.join(self._output_dir, 'NMF', 'component_' + str(num_component), "nmf_model.pickle")):
                 print("This number of components have been trained and converged: %d" % num_component)
@@ -150,7 +155,7 @@ class VB_OPNMF_mini_batch(WorkFlow):
 
                 for i in range(self._max_epoch):
                     W, num_iteration = train(W, dataset, self._batch_size, self._n_threads, i, self._output_dir,
-                                                   num_component, metric_writer, verbose=self._verbose)
+                                             num_component, metric_writer, verbose=self._verbose)
 
                     validate_loss = validate(W, dataset, self._batch_size, self._n_threads, num_iteration, metric_writer)
 
