@@ -39,16 +39,15 @@ class VB_OPNMF(WorkFlow):
         self._verbose = verbose
 
     def run(self):
+        ## define the output structure
+        tsv_path = os.path.join(self._output_dir, 'NMF')
+        folder_not_exist_to_create(tsv_path)
+        ## cp the participant tsv for recording
+        shutil.copyfile(self._participant_tsv, os.path.join(tsv_path, 'participant.tsv'))
+
         VB_data = VB_Input(self._participant_tsv, self._output_dir, self._verbose)
         ## X size is: num_subjects * num_features
         X, orig_shape, data_mask = VB_data.get_x()
-
-        ## define the output structure
-        tsv_path = os.path.join(self._output_dir, 'NMF')
-        if not os.path.exists(tsv_path):
-            os.makedirs(tsv_path)
-        ## cp the participant tsv for recording
-        shutil.copyfile(self._participant_tsv, os.path.join(tsv_path, 'participant.tsv'))
 
         ### save data mask for applying the model to unseen data.
         example_dict = {'mask': data_mask}
@@ -61,15 +60,18 @@ class VB_OPNMF(WorkFlow):
         for i in c_list:
             async_result[i] = {}
 
-        log_dir = os.path.join(self._output_dir, "log_dir")
-        print("Online monitoring the training, please run tensorboard --logdir LOG_DIR in your terminal : %s" % log_dir)
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        metric_writer = SummaryWriter(log_dir=log_dir)
-
         ## apply the model from here with multithreads
         pool = ThreadPool(self._n_threads)
         for num_component in c_list:
+            ## define log dir
+            log_dir = os.path.join(self._output_dir, 'log_dir', 'component_' + str(num_component))
+            folder_not_exist_to_create(log_dir)
+            metric_writer = SummaryWriter(log_dir=log_dir)
+
+            ## check if the number of components/rank is set correctly
+            if num_component > min(X.shape[0], X.shape[1]) or num_component == 1:
+                raise Exception("Number of components should be set correctly, smaller than the number of features and number of subjects")
+
             ### check if the model has been trained to be converged.
             if os.path.exists(os.path.join(self._output_dir, 'NMF', 'component_' + str(num_component), "nmf_model.pickle")):
                 print("This number of components have been trained and converged: %d" % num_component)
@@ -107,9 +109,8 @@ class VB_OPNMF_mini_batch(WorkFlow):
 
     def run(self):
         tsv_path = os.path.join(self._output_dir, 'NMF')
-        log_dir = os.path.join(self._output_dir, "log_dir")
         folder_not_exist_to_create(tsv_path)
-        folder_not_exist_to_create(log_dir)
+
         ## cp the participant tsv for recording
         shutil.copyfile(self._participant_tsv, os.path.join(tsv_path, 'participant.tsv'))
         VB_data = VB_Input(self._participant_tsv_max_memory, self._output_dir, self._verbose)
@@ -129,9 +130,12 @@ class VB_OPNMF_mini_batch(WorkFlow):
         for num_component in c_list:
             ## define log dir
             log_dir = os.path.join(self._output_dir, 'log_dir', 'component_' + str(num_component))
-            if not os.path.exists(log_dir):
-                os.makedirs(log_dir)
+            folder_not_exist_to_create(log_dir)
             metric_writer = SummaryWriter(log_dir=log_dir)
+
+            ## check if the number of components/rank is set correctly
+            if num_component > min(X_max.shape[0], X_max.shape[1]) or num_component == 1:
+                raise Exception("Number of components should be set correctly, smaller than the number of features and number of subjects")
 
             ### check if the model has been trained to be converged.
             if os.path.exists(os.path.join(self._output_dir, 'NMF', 'component_' + str(num_component), "nmf_model.pickle")):
