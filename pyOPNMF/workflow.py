@@ -116,6 +116,9 @@ class VB_OPNMF_mini_batch(WorkFlow):
         VB_data = VB_Input(self._participant_tsv_max_memory, self._output_dir, self._verbose)
         ## X size is: num_subjects * num_features
         X_max, _, data_mask = VB_data.get_x()
+        ## check if NAN in X
+        if np.isnan(np.sum(X_max)):
+            raise Exception("The input matrix contains NAN elements...")
         ### save data mask for applying the model to unseen data.
         mask_dict = {'mask': data_mask}
         pickle_out = open(os.path.join(self._output_dir, 'NMF', "data_mask.pickle"), "wb")

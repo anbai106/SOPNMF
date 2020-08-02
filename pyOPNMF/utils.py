@@ -213,6 +213,9 @@ def train(W, dataset, batch_size, n_threads, num_epoch, output_dir, num_componen
         t1 = time.time()
         print("Loading mini-batch data on CPU using time: ", t1 - t0)
         imgs_mini_batch = batch_data['image'].data.numpy()
+        ## check if NAN in X
+        if np.isnan(np.sum(imgs_mini_batch)):
+            raise Exception("The input matrix contains NAN elements...")
         num_iteration_current = num_epoch * len(dataloader_train) + j
 
         results = pool.apply_async(opnmf_solver_mini_batch, args=(imgs_mini_batch.transpose(), W,
@@ -247,6 +250,9 @@ def validate(W, dataset, batch_size, n_threads, num_iteration, metric_writer):
     ## At the end of each epoch, evaluate the reconsruction based on all data.
     for k, batch_data in enumerate(dataloader_valid):
         imgs_mini_batch = batch_data['image'].data.numpy()
+        ## check if NAN in X
+        if np.isnan(np.sum(imgs_mini_batch)):
+            raise Exception("The input matrix contains NAN elements...")
         mini_batch_loss_sqrt = np.sum(np.square(
             imgs_mini_batch.transpose() - np.matmul(W, np.matmul(W.transpose(), imgs_mini_batch.transpose()))))
         validate_loss_square += mini_batch_loss_sqrt
@@ -323,6 +329,10 @@ def non_negative_double_SVD(X, num_component, init_method):
     ## check the non-negativity of the input matrix A
     if np.sum(np.isneginf(X)) != 0:
         raise Exception("The input matrix contains negative elements...")
+
+    ## check if NAN in X
+    if np.isnan(np.sum(X)):
+        raise Exception("The input matrix contains NAN elements...")
 
     ## extract the size information
     num_features, num_subject = X.shape[0], X.shape[1]
