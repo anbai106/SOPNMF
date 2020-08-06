@@ -194,10 +194,11 @@ class Post_OPNMF(WorkFlow):
     2) also unseen test data
     """
 
-    def __init__(self, participant_tsv, output_dir, component_to_nii=False, extract_reconstruction_error=False, verbose=False):
+    def __init__(self, participant_tsv, output_dir, num_component, component_to_nii=False, extract_reconstruction_error=False, verbose=False):
 
         self._participant_tsv = participant_tsv
         self._output_dir = output_dir
+        self._num_component = num_component
         self._component_to_nii = component_to_nii
         self._extract_reconstruction_error = extract_reconstruction_error
         self._verbose = verbose
@@ -215,28 +216,20 @@ class Post_OPNMF(WorkFlow):
         if self._verbose:
             print("Data after applying mask: %s" % str(X_with_mask.shape))
             print("Data without masking: %s" % str(X_without_mask.shape))
-       
-        ## based on the output folder, check out the C ranges
-        c_list = []
-        for root, dirs, files in os.walk(self._output_dir, topdown=False):
-            for c in dirs:
-                if c.startswith('component_'):
-                    c_list.append(int(c.split('component_')[1]))
 
-        for num_component in c_list:
-            if self._verbose:
-                print("Apply OPNMF for %s components..." % num_component)
+        if self._verbose:
+            print("Apply OPNMF for %s components..." % self._num_component)
 
-            if self._component_to_nii == True:
-                ## convert the coefficient loading matrix back to the original image space and also save the factorization without mask
-                save_components_as_nifti(X_without_mask.transpose(), VB_data._images[0], data_mask, orig_shape,
-                                     self._output_dir, num_component)
-            if self._extract_reconstruction_error == True:
-                ## calculate the reconstruction error based on the masked image
-                reconstruction_error(X_without_mask.transpose(), self._output_dir, num_component, data_mask)
+        if self._component_to_nii == True:
+            ## convert the coefficient loading matrix back to the original image space and also save the factorization without mask
+            save_components_as_nifti(X_without_mask.transpose(), VB_data._images[0], data_mask, orig_shape,
+                                 self._output_dir, self._num_component)
+        if self._extract_reconstruction_error == True:
+            ## calculate the reconstruction error based on the masked image
+            reconstruction_error(X_without_mask.transpose(), self._output_dir, self._num_component, data_mask)
 
-            ## save the loading coefficient with masking.
-            save_loading_coefficient(X_with_mask.transpose(), self._participant_tsv, self._output_dir, num_component)
+        ## save the loading coefficient with masking.
+        save_loading_coefficient(X_with_mask.transpose(), self._participant_tsv, self._output_dir, self._num_component)
 
 
 

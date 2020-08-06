@@ -11,7 +11,7 @@ __email__ = "junhao.wen89@gmail.com"
 __status__ = "Development"
 
 
-def apply_to_training(output_dir, participant_tsv=None, verbose=False):
+def apply_to_training(output_dir, num_component, participant_tsv=None, verbose=False):
     """
     This is the function to apply the trained model to the training data itself.
     :param output_dir: str, path to the output folder
@@ -28,13 +28,13 @@ def apply_to_training(output_dir, participant_tsv=None, verbose=False):
     if participant_tsv == None:
         ## grab the training participant_tsv
         participant_tsv = os.path.join(output_dir, 'NMF', 'participant.tsv')
-    wf = Post_OPNMF(participant_tsv, output_dir, component_to_nii=True, extract_reconstruction_error=True, verbose=verbose)
+    wf = Post_OPNMF(participant_tsv, output_dir, num_component, component_to_nii=True, extract_reconstruction_error=True, verbose=verbose)
 
     wf.run()
 
     print('Finish...')
 
-def apply_to_test(output_dir, participant_tsv, verbose=False):
+def apply_to_test(output_dir, num_component, participant_tsv, verbose=False):
     """
     This is the function to apply the trained model to unseen test data, to extract only loading coefficient matrix in tsv.
     :param participant_tsv: str, path to the participant tsv
@@ -47,7 +47,7 @@ def apply_to_test(output_dir, participant_tsv, verbose=False):
 
     ### For voxel approach
     print('Apply OPNMF to unseen test data...')
-    wf = Post_OPNMF(participant_tsv, output_dir, component_to_nii=False, extract_reconstruction_error=False, verbose=verbose)
+    wf = Post_OPNMF(participant_tsv, output_dir, num_component, component_to_nii=False, extract_reconstruction_error=False, verbose=verbose)
 
     wf.run()
 
