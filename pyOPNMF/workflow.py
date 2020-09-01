@@ -194,7 +194,7 @@ class Post_OPNMF(WorkFlow):
     2) also unseen test data
     """
 
-    def __init__(self, participant_tsv, output_dir, num_component, component_to_nii=False, extract_reconstruction_error=False, verbose=False):
+    def __init__(self, participant_tsv, output_dir, num_component, component_to_nii=True, extract_reconstruction_error=False, verbose=False):
 
         self._participant_tsv = participant_tsv
         self._output_dir = output_dir
