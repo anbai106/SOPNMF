@@ -48,7 +48,7 @@ class VB_OPNMF(WorkFlow):
         VB_data = VB_Input(self._participant_tsv, self._output_dir, self._verbose)
         ## X size is: num_subjects * num_features
         X, orig_shape, data_mask = VB_data.get_x()
-        rank_X = np.linalg.matrix_rank(X)
+        # rank_X = np.linalg.matrix_rank(X)
 
         ### save data mask for applying the model to unseen data.
         example_dict = {'mask': data_mask}
@@ -70,8 +70,9 @@ class VB_OPNMF(WorkFlow):
             metric_writer = SummaryWriter(log_dir=log_dir)
 
             ## check if the number of components/rank is set correctly
-            if num_component >= rank_X or num_component == 1:
-                raise Exception("Number of components should be set correctly, smaller than the rank of the feature maxtrix")
+            # if num_component >= rank_X or num_component == 1:
+            #     print("The rank of the input matrix is %d" % rank_X)
+            #     raise Exception("Number of components should be set correctly, smaller than the rank of the feature maxtrix")
 
             ### check if the model has been trained to be converged.
             if os.path.exists(os.path.join(self._output_dir, 'NMF', 'component_' + str(num_component), "nmf_model.pickle")):
