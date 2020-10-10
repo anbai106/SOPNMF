@@ -929,7 +929,7 @@ def folder_not_exist_to_create(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-def extract_mean_signal(participant_tsv, output_dir, num_component, tissue_map_threshold):
+def extract_signal(participant_tsv, output_dir, num_component, tissue_map_threshold):
     """
     This is a function to extract other metrics in the original image space, such as the mean value of the origiinal images
     """
@@ -940,23 +940,24 @@ def extract_mean_signal(participant_tsv, output_dir, num_component, tissue_map_t
         component_path = os.path.join(output_dir, 'NMF', 'component_' + str(num_component), "component_" + str(i) + "_map.nii.gz") 
         subj = nib.load(component_path)
         subj_data = np.nan_to_num(subj.get_data(caching='unchanged'))
-        mean_value = []
+        values = []
         # create the masks
         data_mask = np.ma.make_mask(subj_data > tissue_map_threshold)
-        num_voxels_mask = np.sum(data_mask)
+        # num_voxels_mask = np.sum(data_mask)
         ## read the original image 
         for image in paths:
             data = nib.load(image)
             data = np.nan_to_num(data.get_data(caching='unchanged'))
             data[~data_mask] = 0
-            mean = np.divide(np.sum(data), num_voxels_mask)  ## note that RAVENS maps has been scaled by 1000, thus should be divided by 1000 if input is RAVENS maps
-            mean_value.append(mean)
+            # mean = np.divide(np.sum(data), num_voxels_mask)  ## note that RAVENS maps has been scaled by 1000, thus should be divided by 1000 if input is RAVENS maps
+            value = np.sum(data) ## note that RAVENS maps has been scaled by 1000, thus should be divided by 1000 if input is RAVENS maps
+            values.append(value)
         
         example_img = image
         output_filename = os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'component_' + str(i) + '_map_mask_threshold-' + str(tissue_map_threshold) + '.nii.gz')
         component_to_nifti(data_mask, example_img, output_filename)
 
-        df_participant['component_' + str(i)] = mean_value
+        df_participant['component_' + str(i)] = values
 
     ## write to tsv files.
     df_participant.to_csv(os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'mean_signal.tsv'), index=False, sep='\t', encoding='utf-8')

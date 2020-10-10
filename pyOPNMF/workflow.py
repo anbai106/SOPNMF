@@ -1,6 +1,6 @@
 from .base import WorkFlow
 from .utils import save_components_as_nifti, reconstruction_error, opnmf_solver, save_loading_coefficient, EarlyStopping, \
-    folder_not_exist_to_create, initialization_W, train, validate, MRIDataset, extract_mean_signal
+    folder_not_exist_to_create, initialization_W, train, validate, MRIDataset, extract_signal
 from .base import VB_Input
 import os, shutil
 import pickle
@@ -231,7 +231,7 @@ class Post_OPNMF(WorkFlow):
         save_loading_coefficient(X_with_mask.transpose(), self._participant_tsv, self._output_dir, self._num_component)
         if self._extract_mean_signal == True:
             ## extract other metrics in the original image space, such as brain volume, shape or texture features
-            extract_mean_signal(self._participant_tsv, self._output_dir, self._num_component, 0.3)
+            extract_signal(self._participant_tsv, self._output_dir, self._num_component, 0.3)
 
 
 
