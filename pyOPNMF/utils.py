@@ -929,13 +929,11 @@ def folder_not_exist_to_create(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-def extract_mean_signal(X, participant_tsv, output_dir, num_component, tissue_map_threshold):
+def extract_mean_signal(participant_tsv, output_dir, num_component, tissue_map_threshold):
     """
     This is a function to extract other metrics in the original image space, such as the mean value of the origiinal images
     """
     df_participant = pd.read_csv(participant_tsv, sep='\t')
-    subjects = list(df_participant['participant_id'])
-    sessions = list(df_participant['session_id'])
     paths = list(df_participant['path'])
     ## read the component image and create the masks
     for i in range(1, num_component + 1):

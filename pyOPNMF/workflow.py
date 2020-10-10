@@ -205,7 +205,7 @@ class Post_OPNMF(WorkFlow):
     def run(self):
         ## grab the data mask based on the training data
         data_mask_path = os.path.join(self._output_dir, 'NMF', 'data_mask.pickle')
-        file = open(data_mask_path,'rb')
+        file = open(data_mask_path, 'rb')
         data_mask = pickle.load(file)['mask']
         file.close()
         VB_data = VB_Input(self._participant_tsv, self._output_dir, self._verbose)
@@ -231,9 +231,7 @@ class Post_OPNMF(WorkFlow):
         save_loading_coefficient(X_with_mask.transpose(), self._participant_tsv, self._output_dir, self._num_component)
         if self._extract_mean_signal == True:
             ## extract other metrics in the original image space, such as brain volume, shape or texture features
-            extract_mean_signal(X_with_mask.transpose(), self._participant_tsv, self._output_dir, self._num_component, 0.3)
-
-	
+            extract_mean_signal(self._participant_tsv, self._output_dir, self._num_component, 0.3)
 
 
 
