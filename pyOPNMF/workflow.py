@@ -1,6 +1,6 @@
 from .base import WorkFlow
 from .utils import save_components_as_nifti, reconstruction_error, opnmf_solver, save_loading_coefficient, EarlyStopping, \
-    folder_not_exist_to_create, initialization_W, train, validate, MRIDataset
+    folder_not_exist_to_create, initialization_W, train, validate, MRIDataset, extract_mean_signal
 from .base import VB_Input
 import os, shutil
 import pickle
@@ -192,13 +192,14 @@ class Post_OPNMF(WorkFlow):
     2) also unseen test data
     """
 
-    def __init__(self, participant_tsv, output_dir, num_component, component_to_nii=True, extract_reconstruction_error=False, verbose=False):
+    def __init__(self, participant_tsv, output_dir, num_component, component_to_nii=True, extract_reconstruction_error=False, extract_mean_signal=False, verbose=False):
 
         self._participant_tsv = participant_tsv
         self._output_dir = output_dir
         self._num_component = num_component
         self._component_to_nii = component_to_nii
         self._extract_reconstruction_error = extract_reconstruction_error
+        self._extract_mean_signal=extract_mean_signal
         self._verbose = verbose
 
     def run(self):
@@ -228,8 +229,11 @@ class Post_OPNMF(WorkFlow):
 
         ## save the loading coefficient with masking.
         save_loading_coefficient(X_with_mask.transpose(), self._participant_tsv, self._output_dir, self._num_component)
+        if self._extract_mean_signal == True:
+            ## extract other metrics in the original image space, such as brain volume, shape or texture features
+            extract_mean_signal(X_with_mask.transpose(), self._participant_tsv, self._output_dir, self._num_component, 0.3)
 
-
+	
 
 
 
