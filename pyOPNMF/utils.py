@@ -641,6 +641,9 @@ def save_components_as_nifti(X, example_img, data_mask, orig_shape, output_dir, 
         B[:, i] = data.flatten().transpose()
         component_to_nifti(data, example_img, output_filename)
 
+    ## save the components masked into one single mask image
+    component_to_mask(W, data_mask, example_img, orig_shape, output_dir, num_component)
+
     ## new loading coefficient
     C = np.matmul(B.transpose(), X)
 
@@ -688,6 +691,35 @@ def component_to_nifti(component, image, output_filename):
 
     output_image = nib.Nifti1Image(features, img_affine)
     nib.save(output_image, output_filename)
+
+def component_to_mask(W, data_mask, example_img, orig_shape, output_dir, num_component):
+    """
+    Convert all component images in original space by converting them to one single mask
+    :param C_original: components matrix in original space without
+    :param example_img:
+    :param orig_shape:
+    :return:
+    """
+    ## turn the small values to be 0
+    W[W < 1e-3] = 0
+    final_component = []
+    ## convert W's elements per column the max value to its index of the row + 1, the other row values to be 0
+    for i in range(W.shape[1]):
+        if not np.any(W[:, i]):
+            final_component.append(0)
+        else:
+            ## binarize the column, max to be its row index and the other to be 0.
+            max_index = np.argmax(W[:, i]) + 1
+            final_component.append(max_index)
+
+    final_component = np.asarray(final_component)
+    ## convert the binarized W into original image space
+    final_component = revert_mask(final_component, data_mask, orig_shape)
+    ## to nifti image
+    img = nib.load(example_img)
+    img_affine = img.affine
+    output_image = nib.Nifti1Image(final_component, img_affine)
+    nib.save(output_image, os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'components_mask.nii.gz'))
 
 def reconstruction_error(X, output_dir, num_component, data_mask):
     """
@@ -929,20 +961,20 @@ def folder_not_exist_to_create(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-def extract_signal(participant_tsv, output_dir, num_component, tissue_map_threshold):
+def extract_atlas_signal(participant_tsv, output_dir, num_component):
     """
-    This is a function to extract other metrics in the original image space, such as the mean value of the origiinal images
+    This is a function to extract the sum of values in each ROI in the opNMF-atals.
     """
     df_participant = pd.read_csv(participant_tsv, sep='\t')
     paths = list(df_participant['path'])
     ## read the component image and create the masks
+    component_path = os.path.join(output_dir, 'NMF', 'component_' + str(num_component), "components_mask.nii.gz")
+    subj = nib.load(component_path)
+    subj_data = np.nan_to_num(subj.get_data(caching='unchanged'))
     for i in range(1, num_component + 1):
-        component_path = os.path.join(output_dir, 'NMF', 'component_' + str(num_component), "component_" + str(i) + "_map.nii.gz") 
-        subj = nib.load(component_path)
-        subj_data = np.nan_to_num(subj.get_data(caching='unchanged'))
         values = []
         # create the masks
-        data_mask = np.ma.make_mask(subj_data > tissue_map_threshold)
+        data_mask = np.ma.make_mask(subj_data == i)
         # num_voxels_mask = np.sum(data_mask)
         ## read the original image 
         for image in paths:
@@ -952,12 +984,7 @@ def extract_signal(participant_tsv, output_dir, num_component, tissue_map_thresh
             # mean = np.divide(np.sum(data), num_voxels_mask)  ## note that RAVENS maps has been scaled by 1000, thus should be divided by 1000 if input is RAVENS maps
             value = np.sum(data) ## note that RAVENS maps has been scaled by 1000, thus should be divided by 1000 if input is RAVENS maps
             values.append(value)
-        
-        example_img = image
-        output_filename = os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'component_' + str(i) + '_map_mask_threshold-' + str(tissue_map_threshold) + '.nii.gz')
-        component_to_nifti(data_mask, example_img, output_filename)
-
         df_participant['component_' + str(i)] = values
 
     ## write to tsv files.
-    df_participant.to_csv(os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'mean_signal.tsv'), index=False, sep='\t', encoding='utf-8')
+    df_participant.to_csv(os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'atlas_components_signal.tsv'), index=False, sep='\t', encoding='utf-8')
