@@ -959,7 +959,7 @@ def folder_not_exist_to_create(path):
     :return:
     """
     if not os.path.exists(path):
-        os.makedirs(path)
+        os.makedirs(path, exist_ok=True)
 
 def extract_atlas_signal(participant_tsv, output_dir, num_component):
     """
