@@ -12,7 +12,7 @@ __status__ = "Development"
 def train(participant_tsv, output_dir, num_component_min, num_component_max, num_component_step=1, max_iter=50000,
           init_method='NNDSVDRandomSVD', magnitude_tolerance=0, early_stopping_epoch=20, n_threads=8, verbose=False):
     """
-    Train OPNMF from voxel-wise image
+    Core function of opNMF algorithm.
     :param participant_tsv: str, path to the tsv containing the population information, insipred by BIDS convention. The tsv contains
         the following headers: "
                                  "i) the first column is the participant_id;"
@@ -45,7 +45,7 @@ def train_mini_batch(participant_tsv, participant_tsv_max_memory, output_dir, nu
                      num_component_step=1, batch_size=200, max_epoch=50000, init_method='NNDSVDRandomSVD', early_stopping_epoch=100,
                      n_threads=8, verbose=False):
     """
-    Train OPNMF from voxel-wise image, trained by mini-batch online learning
+    Core function of sopNMF algorithm.
     :param participant_tsv: str, path to the tsv containing the population information, insipred by BIDS convention. The tsv contains
         the following headers: "
                                  "i) the first column is the participant_id;"

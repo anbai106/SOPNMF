@@ -192,11 +192,12 @@ class Post_OPNMF(WorkFlow):
     2) also unseen test data
     """
 
-    def __init__(self, participant_tsv, output_dir, num_component, component_to_nii=True, extract_reconstruction_error=False, verbose=False):
+    def __init__(self, participant_tsv, output_dir, num_component, mask_threshold =100, component_to_nii=True, extract_reconstruction_error=False, verbose=False):
 
         self._participant_tsv = participant_tsv
         self._output_dir = output_dir
         self._num_component = num_component
+        self._mask_threshold = mask_threshold
         self._component_to_nii = component_to_nii
         self._extract_reconstruction_error = extract_reconstruction_error
         self._verbose = verbose
@@ -219,7 +220,7 @@ class Post_OPNMF(WorkFlow):
         if self._component_to_nii == True:
             ## convert the coefficient loading matrix back to the original image space and also save the factorization without mask
             save_components_as_nifti(X_without_mask.transpose(), VB_data._images[0], data_mask, orig_shape,
-                                 self._output_dir, self._num_component)
+                                 self._output_dir, self._num_component, self._mask_threshold)
         if self._extract_reconstruction_error == True:
             ## calculate the reconstruction error based on the masked image
             reconstruction_error(X_without_mask.transpose(), self._output_dir, self._num_component, data_mask)

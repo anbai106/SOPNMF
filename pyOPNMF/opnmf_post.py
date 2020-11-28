@@ -11,25 +11,25 @@ __email__ = "junhao.wen89@gmail.com"
 __status__ = "Development"
 
 
-def apply_to_training(output_dir, num_component, participant_tsv=None, component_to_nii=True, extract_reconstruction_error=True, 
+def apply_to_training(output_dir, num_component, mask_threshold=100, component_to_nii=True, extract_reconstruction_error=True,
                       verbose=False):
     """
-    This is the function to apply the trained model to the training data itself.
-    :param output_dir: str, path to the output folder
-    :param verbose: Boolean, default is False
-
+    After the model converges, we extract the componets in original image space for visualization, create the opNMF component-based atlas,
+    calculate the loading coefficient matrix and reconstruction error.
+    :param output_dir: str, output directory to save the results
+    :param num_component: int, number of components to extract
+    :param mask_threshold: the threshold used to create the atlas. The threshold is defined to create the population-based tissue map mask,
+                            in order to exclusively include voxels in the images.
+    :param component_to_nii: save components in nii images and create the atlas
+    :param extract_reconstruction_error: calculate the reconstruction errors
+    :param verbose: Default is False
     :return:
-    1) loading coefficient matrix;
-    2) components to nifti images for visualization;
-    3) reconstruction error for each C (number of components);
     """
 
     ### For voxel approach
     print('Performing postprocessing for OPNMF using voxel-wise features...')
-    if participant_tsv == None:
-        ## grab the training participant_tsv
-        participant_tsv = os.path.join(output_dir, 'NMF', 'participant.tsv')
-    wf = Post_OPNMF(participant_tsv, output_dir, num_component, component_to_nii=component_to_nii,
+    participant_tsv = os.path.join(output_dir, 'NMF', 'participant.tsv')
+    wf = Post_OPNMF(participant_tsv, output_dir, num_component, mask_threshold=mask_threshold, component_to_nii=component_to_nii,
                     extract_reconstruction_error=extract_reconstruction_error, verbose=verbose)
 
     wf.run()
@@ -38,7 +38,7 @@ def apply_to_training(output_dir, num_component, participant_tsv=None, component
 
 def apply_to_test(output_dir, num_component, participant_tsv, verbose=False):
     """
-    This is the function to apply the trained model to unseen test data, to extract only loading coefficient matrix in tsv.
+    Apply the trained model to external dataset. Both coefficient matrix and the signal based on the opNMF atlas will be extracted.
     :param participant_tsv: str, path to the participant tsv
     :param output_dir: str, path to the output folder
     :param verbose: Boolean, default is False

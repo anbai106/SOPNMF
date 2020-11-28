@@ -609,14 +609,20 @@ def load_data_apply_mask(image_list, mask):
 
     return data, shape
 
-def save_components_as_nifti(X, example_img, data_mask, orig_shape, output_dir, num_component):
+def save_components_as_nifti(X, example_img, data_mask, orig_shape, output_dir, num_component, mask_threshold=100):
     """
-    Map the coefficient H of NMF back to image space for spatial visualization
+    Map the coefficient H of NMF back to image space for spatial visualization, also create the opNMF atlas based on the
+    extracted components. Note, the atlas was created based on thresholding each column of the coefficient maxtrix: mask_threshold.
+    One should have prior knowledge of the input map's intensity values. For instance, RAVENS GM maps, we exclude the voxels
+    whose's intensity values are lower than 100.
+
+    :param X:
     :param example_img:
-    :param H:
     :param data_mask:
     :param orig_shape:
     :param output_dir:
+    :param num_component:
+    :param mask_threshold:
     :return:
     """
 
@@ -642,7 +648,7 @@ def save_components_as_nifti(X, example_img, data_mask, orig_shape, output_dir, 
         component_to_nifti(data, example_img, output_filename)
 
     ## save the components masked into one single mask image
-    component_to_mask(W, data_mask, example_img, orig_shape, output_dir, num_component)
+    component_to_mask(W, data_mask, example_img, orig_shape, output_dir, num_component, mask_threshold)
 
     ## new loading coefficient
     C = np.matmul(B.transpose(), X)
@@ -692,7 +698,7 @@ def component_to_nifti(component, image, output_filename):
     output_image = nib.Nifti1Image(features, img_affine)
     nib.save(output_image, output_filename)
 
-def component_to_mask(W, data_mask, example_img, orig_shape, output_dir, num_component):
+def component_to_mask(W, data_mask, example_img, orig_shape, output_dir, num_component, mask_threshold):
     """
     Convert all component images in original space by converting them to one single mask
     :param C_original: components matrix in original space without
@@ -701,7 +707,7 @@ def component_to_mask(W, data_mask, example_img, orig_shape, output_dir, num_com
     :return:
     """
     ## turn the small values to be 0
-    W[W < 1e-3] = 0
+    # W[W < 1e-3] = 0
     final_component = []
     ## convert W's elements per column the max value to its index of the row + 1, the other row values to be 0
     for i in range(W.shape[1]):
@@ -718,6 +724,11 @@ def component_to_mask(W, data_mask, example_img, orig_shape, output_dir, num_com
     ## to nifti image
     img = nib.load(example_img)
     img_affine = img.affine
+    img_data = img.get_data(caching='unchanged')
+    ## created the tissue mask based on the intensity of the example images
+    data_mask = np.ma.make_mask(img_data >= mask_threshold)
+    final_component[~data_mask] = 0
+
     output_image = nib.Nifti1Image(final_component, img_affine)
     nib.save(output_image, os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'components_mask.nii.gz'))
 
