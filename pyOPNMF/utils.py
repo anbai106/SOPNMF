@@ -972,7 +972,7 @@ def folder_not_exist_to_create(path):
     if not os.path.exists(path):
         os.makedirs(path, exist_ok=True)
 
-def extract_atlas_signal(participant_tsv, output_dir, num_component):
+def extract_atlas_mean_signal(participant_tsv, output_dir, num_component):
     """
     This is a function to extract the sum of values in each ROI in the opNMF-atals.
     """
@@ -993,8 +993,8 @@ def extract_atlas_signal(participant_tsv, output_dir, num_component):
             data = np.nan_to_num(data.get_data(caching='unchanged'))
             data[~data_mask] = 0
             # mean = np.divide(np.sum(data), num_voxels_mask)  ## note that RAVENS maps has been scaled by 1000, thus should be divided by 1000 if input is RAVENS maps
-            value = np.sum(data) ## note that RAVENS maps has been scaled by 1000, thus should be divided by 1000 if input is RAVENS maps
-            values.append(value)
+            mean_value = np.sum(data) / np.sum(data_mask)## note that RAVENS maps has been scaled by 1000, thus should be divided by 1000 if input is RAVENS maps
+            values.append(mean_value)
         df_participant['component_' + str(i)] = values
 
     ## write to tsv files.
