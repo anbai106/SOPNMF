@@ -1,5 +1,5 @@
 import numpy as np
-import os
+import os, math
 import nibabel as nib
 from scipy.sparse import issparse
 from scipy.linalg import svd, norm, lu, qr
@@ -994,8 +994,13 @@ def extract_atlas_mean_signal(participant_tsv, output_dir, num_component):
             data[~data_mask] = 0
             # mean = np.divide(np.sum(data), num_voxels_mask)  ## note that RAVENS maps has been scaled by 1000, thus should be divided by 1000 if input is RAVENS maps
             mean_value = np.sum(data) / np.sum(data_mask)## note that RAVENS maps has been scaled by 1000, thus should be divided by 1000 if input is RAVENS maps
-            values.append(mean_value)
-        df_participant['component_' + str(i)] = values
-
+            if math.isnan(mean_value):
+                break
+            else:
+                values.append(mean_value)
+        if len(values) == df_participant.shape[0]:
+            df_participant['component_' + str(i)] = values
+        else:
+            print("Component %d vanishes during opnmf-atlas creation..." % i)
     ## write to tsv files.
     df_participant.to_csv(os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'atlas_components_signal.tsv'), index=False, sep='\t', encoding='utf-8')
