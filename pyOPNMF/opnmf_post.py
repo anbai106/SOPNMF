@@ -11,15 +11,18 @@ __email__ = "junhao.wen89@gmail.com"
 __status__ = "Development"
 
 
-def apply_to_training(output_dir, num_component, mask_threshold=100, component_to_nii=True, extract_reconstruction_error=True,
+def apply_to_training(output_dir, num_component, template_image=None, atlas_thresdold=100, component_to_nii=True, extract_reconstruction_error=True,
                       verbose=False):
     """
     After the model converges, we extract the componets in original image space for visualization, create the opNMF component-based atlas,
     calculate the loading coefficient matrix and reconstruction error.
     :param output_dir: str, output directory to save the results
     :param num_component: int, number of components to extract
-    :param mask_threshold: the threshold used to create the atlas. The threshold is defined to create the population-based tissue map mask,
-                            in order to exclusively include voxels in the images.
+    :param template_image: str. The path to the population-based template image, e.g., template image in MNI space. Default is None,
+                                where the first input image will be used to save the component images and the opnmf-atlas (i.e., header, affine, etc).
+                                Otherwise, the components images and the single atlas image will be saved in the same space as the template.
+    :param atlas_thresdold: int, the threshold to create the opnmf-atlas, depending on the intensity of the input image or template image.
+                                We only want to include the voxels inside the brain or the tissue maps.
     :param component_to_nii: save components in nii images and create the atlas
     :param extract_reconstruction_error: calculate the reconstruction errors
     :param verbose: Default is False
@@ -29,7 +32,8 @@ def apply_to_training(output_dir, num_component, mask_threshold=100, component_t
     ### For voxel approach
     print('Performing postprocessing for OPNMF using voxel-wise features...')
     participant_tsv = os.path.join(output_dir, 'NMF', 'participant.tsv')
-    wf = Post_OPNMF(participant_tsv, output_dir, num_component, mask_threshold=mask_threshold, component_to_nii=component_to_nii,
+    participant_tsv = '/run/user/1000/gvfs/sftp:host=cubic-login,user=wenju/cbica/home/wenju/Project/pyOPNMF/data/Phenom/participant_Phenom_GM_ubuntu.tsv'
+    wf = Post_OPNMF(participant_tsv, output_dir, num_component, template_image=template_image, atlas_thresdold=atlas_thresdold, component_to_nii=component_to_nii,
                     extract_reconstruction_error=extract_reconstruction_error, verbose=verbose)
 
     wf.run()

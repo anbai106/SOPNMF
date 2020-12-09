@@ -609,7 +609,7 @@ def load_data_apply_mask(image_list, mask):
 
     return data, shape
 
-def save_components_as_nifti(X, example_img, data_mask, orig_shape, output_dir, num_component, mask_threshold=100):
+def save_components_as_nifti(X, example_img, data_mask, orig_shape, output_dir, num_component, atlas_threshold):
     """
     Map the coefficient H of NMF back to image space for spatial visualization, also create the opNMF atlas based on the
     extracted components. Note, the atlas was created based on thresholding each column of the coefficient maxtrix: mask_threshold.
@@ -617,7 +617,7 @@ def save_components_as_nifti(X, example_img, data_mask, orig_shape, output_dir, 
     whose's intensity values are lower than 100.
 
     :param X:
-    :param example_img:
+    :param example_img: By default, the first input image will be used if the template is not given.
     :param data_mask:
     :param orig_shape:
     :param output_dir:
@@ -648,7 +648,7 @@ def save_components_as_nifti(X, example_img, data_mask, orig_shape, output_dir, 
         component_to_nifti(data, example_img, output_filename)
 
     ## save the components masked into one single mask image
-    component_to_mask(W, data_mask, example_img, orig_shape, output_dir, num_component, mask_threshold)
+    component_to_opnmf_atlas(W, data_mask, example_img, orig_shape, output_dir, num_component, atlas_threshold)
 
     ## new loading coefficient
     C = np.matmul(B.transpose(), X)
@@ -698,9 +698,9 @@ def component_to_nifti(component, image, output_filename):
     output_image = nib.Nifti1Image(features, img_affine)
     nib.save(output_image, output_filename)
 
-def component_to_mask(W, data_mask, example_img, orig_shape, output_dir, num_component, mask_threshold):
+def component_to_opnmf_atlas(W, data_mask, example_img, orig_shape, output_dir, num_component, atlas_threshold):
     """
-    Convert all component images in original space by converting them to one single mask
+    Convert all component images in original space by converting them to one single mask, i.e., the opnmf atlas
     :param C_original: components matrix in original space without
     :param example_img:
     :param orig_shape:
@@ -725,12 +725,12 @@ def component_to_mask(W, data_mask, example_img, orig_shape, output_dir, num_com
     img = nib.load(example_img)
     img_affine = img.affine
     img_data = img.get_data(caching='unchanged')
-    ## created the tissue mask based on the intensity of the example images
-    data_mask = np.ma.make_mask(img_data >= mask_threshold)
-    final_component[~data_mask] = 0
+    ## created the tissue mask based on the intensity of the example image
+    example_data_mask = np.ma.make_mask(img_data >= atlas_threshold)
+    final_component[~example_data_mask] = 0
 
     output_image = nib.Nifti1Image(final_component, img_affine)
-    nib.save(output_image, os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'components_mask.nii.gz'))
+    nib.save(output_image, os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'components_atlas.nii.gz'))
 
 def reconstruction_error(X, output_dir, num_component, data_mask):
     """
@@ -979,7 +979,7 @@ def extract_atlas_mean_signal(participant_tsv, output_dir, num_component):
     df_participant = pd.read_csv(participant_tsv, sep='\t')
     paths = list(df_participant['path'])
     ## read the component image and create the masks
-    component_path = os.path.join(output_dir, 'NMF', 'component_' + str(num_component), "components_mask.nii.gz")
+    component_path = os.path.join(output_dir, 'NMF', 'component_' + str(num_component), "components_atlas.nii.gz")
     subj = nib.load(component_path)
     subj_data = np.nan_to_num(subj.get_data(caching='unchanged'))
     for i in range(1, num_component + 1):
