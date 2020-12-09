@@ -156,6 +156,8 @@ class VB_OPNMF_mini_batch(WorkFlow):
                     file.close()
                 else:
                     ## initialization.
+                    if num_component >= X_max.shape[0] or num_component >= X_max.shape[1]:
+                        raise Exception("Number of components should be smaller than the dimension of the input data")
                     W = initialization_W(X_max.transpose(), self._init_method, num_component)
 
                 for i in range(self._max_epoch):

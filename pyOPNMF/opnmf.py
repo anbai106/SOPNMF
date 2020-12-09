@@ -9,7 +9,7 @@ __maintainer__ = "Junhao Wen"
 __email__ = "junhao.wen89@gmail.com"
 __status__ = "Development"
 
-def train(participant_tsv, output_dir, num_component_min, num_component_max, num_component_step=1, max_iter=50000,
+def opnmf(participant_tsv, output_dir, num_component_min, num_component_max, num_component_step=1, max_iter=50000,
           init_method='NNDSVDRandomSVD', magnitude_tolerance=0, early_stopping_epoch=20, n_threads=8, verbose=False):
     """
     Core function of opNMF algorithm.
@@ -41,11 +41,12 @@ def train(participant_tsv, output_dir, num_component_min, num_component_max, num
 
     print('Finish...')
 
-def train_mini_batch(participant_tsv, participant_tsv_max_memory, output_dir, num_component_min, num_component_max,
-                     num_component_step=1, batch_size=200, max_epoch=50000, init_method='NNDSVDRandomSVD', early_stopping_epoch=100,
+def sopnmf(participant_tsv, participant_tsv_max_memory, output_dir, num_component_min, num_component_max,
+                     num_component_step=1, batch_size=8, max_epoch=50000, init_method='NNDSVDRandomSVD', early_stopping_epoch=100,
                      n_threads=8, verbose=False):
     """
-    Core function of sopNMF algorithm.
+    Core function of sopNMF algorithm. Train the model like a deep learning model. Normally, with smaller batch size, it converges faster,
+    since reading the batch data by CPU is less time-consuming (even though your models will have to run more iterations).
     :param participant_tsv: str, path to the tsv containing the population information, insipred by BIDS convention. The tsv contains
         the following headers: "
                                  "i) the first column is the participant_id;"

@@ -32,7 +32,6 @@ def apply_to_training(output_dir, num_component, template_image=None, atlas_thre
     ### For voxel approach
     print('Performing postprocessing for OPNMF using voxel-wise features...')
     participant_tsv = os.path.join(output_dir, 'NMF', 'participant.tsv')
-    participant_tsv = '/run/user/1000/gvfs/sftp:host=cubic-login,user=wenju/cbica/home/wenju/Project/pyOPNMF/data/Phenom/participant_Phenom_GM_ubuntu.tsv'
     wf = Post_OPNMF(participant_tsv, output_dir, num_component, template_image=template_image, atlas_thresdold=atlas_thresdold, component_to_nii=component_to_nii,
                     extract_reconstruction_error=extract_reconstruction_error, verbose=verbose)
 
