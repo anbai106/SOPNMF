@@ -983,7 +983,8 @@ def extract_atlas_mean_signal(participant_tsv, output_dir, num_component):
     subj = nib.load(component_path)
     subj_data = np.nan_to_num(subj.get_data(caching='unchanged'))
     for i in range(1, num_component + 1):
-        values = []
+        values_mean = []
+        values_sum = []
         # create the masks
         data_mask = np.ma.make_mask(subj_data == i)
         # num_voxels_mask = np.sum(data_mask)
@@ -994,12 +995,15 @@ def extract_atlas_mean_signal(participant_tsv, output_dir, num_component):
             data[~data_mask] = 0
             # mean = np.divide(np.sum(data), num_voxels_mask)  ## note that RAVENS maps has been scaled by 1000, thus should be divided by 1000 if input is RAVENS maps
             mean_value = np.sum(data) / np.sum(data_mask)## note that RAVENS maps has been scaled by 1000, thus should be divided by 1000 if input is RAVENS maps
-            if math.isnan(mean_value):
+            sum_value = np.sum(data)
+            if math.isnan(mean_value) or math.isnan(sum_value):
                 break
             else:
-                values.append(mean_value)
-        if len(values) == df_participant.shape[0]:
-            df_participant['component_' + str(i)] = values
+                values_mean.append(mean_value)
+                values_sum.append(sum_value)
+        if len(values_mean) == df_participant.shape[0]:
+            df_participant['component_' + str(i) + '_mean'] = values_mean
+            df_participant['component_' + str(i) + '_sum'] = values_sum
         else:
             print("Component %d vanishes during opnmf-atlas creation..." % i)
     ## write to tsv files.
