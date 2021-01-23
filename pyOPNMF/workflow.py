@@ -164,7 +164,7 @@ class VB_OPNMF_mini_batch(WorkFlow):
                     W, num_iteration = train(W, dataset, self._batch_size, self._n_threads, i, self._output_dir,
                                              num_component, metric_writer, verbose=self._verbose)
 
-                    validate_loss = validate(W, dataset, self._batch_size, self._n_threads, num_iteration, metric_writer)
+                    validate_loss = validate(W, dataset, self._batch_size, self._n_threads, i, metric_writer)
 
                     # save the best model based on the best loss
                     is_best = validate_loss < best_loss_valid

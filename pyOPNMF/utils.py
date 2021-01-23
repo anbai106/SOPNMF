@@ -228,14 +228,14 @@ def train(W, dataset, batch_size, n_threads, num_epoch, output_dir, num_componen
     return W, num_iteration_current
 
 
-def validate(W, dataset, batch_size, n_threads, num_iteration, metric_writer):
+def validate(W, dataset, batch_size, n_threads, i, metric_writer):
     """
     FUnction to validate the model with whole dataset
     :param W: numpy array
     :param dataset: a dataset instance of pytorch
     :param batch_size: int, batch size
     :param n_threads: int, number of cpus to use
-    :param num_iteration: int, the current iteration at the end of each epoch
+    :param i: int, the current epoch
     :param metric_writer: an instance of Tensorboard SummaryWriter
     :return:
     """
@@ -258,7 +258,7 @@ def validate(W, dataset, batch_size, n_threads, num_iteration, metric_writer):
         validate_loss_square += mini_batch_loss_sqrt
     validate_loss = np.sqrt(validate_loss_square)
     ## write to tensorboardX
-    metric_writer.add_scalar('batch_loss', validate_loss, num_iteration)
+    metric_writer.add_scalar('batch_loss', validate_loss, i)
 
     return validate_loss
 
