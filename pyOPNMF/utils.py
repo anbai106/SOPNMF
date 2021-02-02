@@ -11,6 +11,7 @@ import time
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from multiprocessing.pool import ThreadPool
+import torch
 
 __author__ = "Junhao Wen"
 __copyright__ = "Copyright 2019 The CBICA & SBIA Lab"
@@ -167,21 +168,15 @@ def opnmf_solver_mini_batch(X, W, output_dir, num_component, num_iteration, metr
     W = np.divide(W, norm(W, ord=2))
     ## difference after iteration
     diff_W = norm(W_old - W, 'fro') / norm(W_old, 'fro')
-    ## sparcity of W
-    ### the sparsity definition is referred from Hoyer 2004.
-    n = W.size
-    sparsity = np.divide(np.sqrt(n) - np.divide(np.sum(np.absolute(W)), np.sqrt(np.sum(np.square(W)))), np.sqrt(n) - 1)
     ## Mini-batch loss
     mini_batch_loss = norm(X - np.matmul(W, np.matmul(W.transpose(), X)), ord='fro')
     ## Display for TensorboardX
     metric_writer.add_scalar('diff_W', diff_W, num_iteration)
-    metric_writer.add_scalar('sparsity', sparsity, num_iteration)
     metric_writer.add_scalar('mini_batch_loss', mini_batch_loss, num_iteration)
     if verbose:
         print("Iteration: %d ...\n" % num_iteration)
         print("W difference %f  ...\n" % diff_W)
         print("Mini-batch loss loss: %f  ...\n" % mini_batch_loss)
-        print("Sparsity: %f  ...\n" % sparsity)
 
     return W
 
@@ -259,6 +254,12 @@ def validate(W, dataset, batch_size, n_threads, i, metric_writer):
     validate_loss = np.sqrt(validate_loss_square)
     ## write to tensorboardX
     metric_writer.add_scalar('batch_loss', validate_loss, i)
+    ## sparcity of W
+    ### the sparsity definition is referred from Hoyer 2004.
+    n = W.size
+    sparsity = np.divide(np.sqrt(n) - np.divide(np.sum(np.absolute(W)), np.sqrt(np.sum(np.square(W)))), np.sqrt(n) - 1)
+    ## write to tensorboardX
+    metric_writer.add_scalar('sparsity', sparsity, i)
 
     return validate_loss
 
@@ -550,11 +551,16 @@ def load_data(image_list, verbose=False, mask=True):
     first = True
 
     for i in range(len(image_list)):
-
         if verbose:
             print('Loading image: %s with masking \n' % image_list[i])
-        subj = nib.load(image_list[i])
-        subj_data = np.nan_to_num(subj.get_data(caching='unchanged'))
+        if image_list[i].find('.nii.gz') != -1:
+            subj = nib.load(image_list[i])
+            subj_data = np.nan_to_num(subj.get_data(caching='unchanged'))
+        elif image_list[i].find('.pt') != -1:
+            subj_data = torch.load(image_list[i])
+            subj_data = np.squeeze(subj_data.cpu().detach().numpy())
+        else:
+            raise Exception("Input image does not have the correct format...")
         shape = subj_data.shape
         ## change dtype to float32 to save memory, in case number of images is huge, consider downsample the image resolution.
         subj_data = subj_data.flatten().astype('float32')
@@ -956,8 +962,13 @@ class MRIDataset(Dataset):
         img_name = self._df.loc[idx, 'participant_id']
         sess_name = self._df.loc[idx, 'session_id']
         image_path = self._df.loc[idx, 'path']
-        subj = nib.load(image_path)
-        image = np.nan_to_num(subj.get_data(caching='unchanged')).flatten().astype('float32')
+        if image_path.find('.nii.gz') != -1:
+            subj = nib.load(image_path)
+            subj_data = np.nan_to_num(subj.get_data(caching='unchanged'))
+        elif image_path.find('.pt') != -1:
+            subj_data = torch.load(image_path)
+            subj_data = np.squeeze(subj_data.cpu().detach().numpy())
+        image = np.nan_to_num(subj_data).flatten().astype('float32')
         image = image[self._mask] ## apply mask to single image, not to multiple image data[:, mask]
         sample = {'image': image, 'participant_id': img_name, 'session_id': sess_name}
 
