@@ -127,7 +127,7 @@ class VB_OPNMF_mini_batch(WorkFlow):
         pickle.dump(mask_dict, pickle_out)
         pickle_out.close()
 
-        dataset = MRIDataset(self._participant_tsv, data_mask)
+        # dataset = MRIDataset(self._participant_tsv, data_mask)
         c_list = list(range(self._num_component_min, self._num_component_max + self._num_component_step,
                             self._num_component_step))
         best_loss_valid = np.inf
@@ -161,10 +161,10 @@ class VB_OPNMF_mini_batch(WorkFlow):
                     W = initialization_W(X_max.transpose(), self._init_method, num_component)
 
                 for i in range(self._max_epoch):
-                    W, num_iteration = train(W, dataset, self._batch_size, self._n_threads, i, self._output_dir,
+                    W, num_iteration = train(W, self._participant_tsv, self._batch_size, self._n_threads, i, self._output_dir,
                                              num_component, metric_writer, verbose=self._verbose)
 
-                    validate_loss = validate(W, dataset, self._batch_size, self._n_threads, i, metric_writer)
+                    validate_loss = validate(W, self._participant_tsv, self._batch_size, self._output_dir, i, metric_writer)
 
                     # save the best model based on the best loss
                     is_best = validate_loss < best_loss_valid

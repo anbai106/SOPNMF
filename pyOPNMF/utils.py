@@ -180,7 +180,7 @@ def opnmf_solver_mini_batch(X, W, output_dir, num_component, num_iteration, metr
 
     return W
 
-def train(W, dataset, batch_size, n_threads, num_epoch, output_dir, num_component, metric_writer, verbose=True):
+def train(W, participant_tsv, batch_size, n_threads, num_epoch, output_dir, num_component, metric_writer, verbose=True):
     """
     Function to train the model in mini-batch mode
     :param W: numpy array
@@ -195,23 +195,28 @@ def train(W, dataset, batch_size, n_threads, num_epoch, output_dir, num_componen
     :param verbose: bool.
     :return:
     """
-    dataloader_train = DataLoader(dataset,
-                                  batch_size=batch_size,
-                                  shuffle=True,
-                                  num_workers=n_threads,
-                                  drop_last=True)
 
     t0 = time.time()
-    ## apply the model from here with multithreads
+    # apply the model from here with multithreads
     pool = ThreadPool(n_threads)
-    for j, batch_data in enumerate(dataloader_train):
+
+    ### random split the pariticipate without replacement
+    df = pd.read_csv(participant_tsv, sep='\t')
+    num_batches = math.floor(df.shape[0] / batch_size)
+    df = df.sample(frac=1)
+    batches_list = np.array_split(df, num_batches)
+    predefined_mask_path = os.path.join(output_dir, 'NMF', 'data_mask.pickle')
+
+    for j in range(len(batches_list)):
+        img_list = list(batches_list[j]['path'])
+        imgs_mini_batch = load_data_apply_mask(img_list, predefined_mask_path)[0]
         t1 = time.time()
         print("Loading mini-batch data on CPU using time: ", t1 - t0)
-        imgs_mini_batch = batch_data['image'].data.numpy()
+
         ## check if NAN or INF in X
         if np.isfinite(imgs_mini_batch).all() == False:
             raise Exception("The input matrix contains NAN or INF elements...")
-        num_iteration_current = num_epoch * len(dataloader_train) + j
+        num_iteration_current = num_epoch * len(batches_list) + j
 
         results = pool.apply_async(opnmf_solver_mini_batch, args=(imgs_mini_batch.transpose(), W,
                                                                   output_dir, num_component,
@@ -223,7 +228,7 @@ def train(W, dataset, batch_size, n_threads, num_epoch, output_dir, num_componen
     return W, num_iteration_current
 
 
-def validate(W, dataset, batch_size, n_threads, i, metric_writer):
+def validate(W, participant_tsv, batch_size, output_dir, i, metric_writer):
     """
     FUnction to validate the model with whole dataset
     :param W: numpy array
@@ -234,18 +239,17 @@ def validate(W, dataset, batch_size, n_threads, i, metric_writer):
     :param metric_writer: an instance of Tensorboard SummaryWriter
     :return:
     """
-    ### This is used for evaluate the reconstruction loss
-    dataloader_valid = DataLoader(dataset,
-                                  batch_size=batch_size,
-                                  shuffle=False,
-                                  num_workers=n_threads,
-                                  drop_last=False)
 
     validate_loss_square = 0
-    ## At the end of each epoch, evaluate the reconsruction based on all data.
-    for k, batch_data in enumerate(dataloader_valid):
-        imgs_mini_batch = batch_data['image'].data.numpy()
-        ## check if NAN or INF in X
+    ### random split the pariticipate without replacement
+    df = pd.read_csv(participant_tsv, sep='\t')
+    num_batches = math.floor(df.shape[0] / batch_size)
+    batches_list = np.array_split(df, num_batches)
+    predefined_mask_path = os.path.join(output_dir, 'NMF', 'data_mask.pickle')
+
+    for j in range(len(batches_list)):
+        img_list = list(batches_list[j]['path'])
+        imgs_mini_batch = load_data_apply_mask(img_list, predefined_mask_path)[0]
         if np.isfinite(imgs_mini_batch).all() == False:
             raise Exception("The input matrix contains NAN or INF elements...")
         mini_batch_loss_sqrt = np.sum(np.square(
@@ -594,8 +598,15 @@ def load_data_apply_mask(image_list, mask):
     first = True
 
     for i in range(len(image_list)):
-        subj = nib.load(image_list[i])
-        subj_data = np.nan_to_num(subj.get_data(caching='unchanged'))
+        if image_list[i].find('.nii.gz') != -1:
+            subj = nib.load(image_list[i])
+            subj_data = np.nan_to_num(subj.get_data(caching='unchanged'))
+        elif image_list[i].find('.pt') != -1:
+            subj_data = torch.load(image_list[i])
+            subj_data = np.squeeze(subj_data.cpu().detach().numpy())
+        else:
+            raise Exception("Input image does not have the correct format...")
+        subj_data = np.nan_to_num(subj_data)
         shape = subj_data.shape
         ## change dtype to float32 to save memory, in case number of images is huge, consider downsample the image resolution.
         subj_data = subj_data.flatten().astype('float32')
