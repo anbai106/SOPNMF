@@ -29,7 +29,7 @@ def apply_to_training(output_dir, num_component, tissue_binary_mask, component_t
     ### For voxel approach
     print('Performing postprocessing for OPNMF using voxel-wise features...')
     participant_tsv = os.path.join(output_dir, 'NMF', 'participant.tsv')
-    wf = Post_OPNMF(participant_tsv, output_dir, num_component, tissue_binary_mask, component_to_nii=component_to_nii,
+    wf = Post_OPNMF(participant_tsv, output_dir, num_component, tissue_binary_mask=tissue_binary_mask, component_to_nii=component_to_nii,
                     extract_reconstruction_error=extract_reconstruction_error, verbose=verbose)
 
     wf.run()
