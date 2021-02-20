@@ -1,13 +1,13 @@
 from .base import WorkFlow
 from .utils import save_components_as_nifti, reconstruction_error, opnmf_solver, save_loading_coefficient, EarlyStopping, \
-    folder_not_exist_to_create, initialization_W, train, validate, MRIDataset, extract_atlas_mean_signal
+    folder_not_exist_to_create, initialization_W, train, validate, MRIDataset, extract_atlas_signal
 from .base import VB_Input
 import os, shutil
 import pickle
 from multiprocessing.pool import ThreadPool
 from tensorboardX import SummaryWriter
 import numpy as np
-
+import nibabel as nib
 __author__ = "Junhao Wen"
 __copyright__ = "Copyright 2019 The CBICA & SBIA Lab"
 __credits__ = ["Junhao Wen"]
@@ -194,13 +194,12 @@ class Post_OPNMF(WorkFlow):
     2) also unseen test data
     """
 
-    def __init__(self, participant_tsv, output_dir, num_component, template_image=None, atlas_thresdold=100, component_to_nii=True, extract_reconstruction_error=False, verbose=False):
+    def __init__(self, participant_tsv, output_dir, num_component, tissue_binary_mask, component_to_nii=True, extract_reconstruction_error=False, verbose=False):
 
         self._participant_tsv = participant_tsv
         self._output_dir = output_dir
         self._num_component = num_component
-        self._template_image = template_image
-        self._atlas_thresdold = atlas_thresdold
+        self._tissue_binary_mask = tissue_binary_mask
         self._component_to_nii = component_to_nii
         self._extract_reconstruction_error = extract_reconstruction_error
         self._verbose = verbose
@@ -222,10 +221,8 @@ class Post_OPNMF(WorkFlow):
 
         if self._component_to_nii == True:
             ## convert the coefficient loading matrix back to the original image space and also save the factorization without mask
-            if self._template_image == None:
-                self._template_image = VB_data._images[0]
-            save_components_as_nifti(X_without_mask.transpose(), self._template_image, data_mask, orig_shape,
-                                 self._output_dir, self._num_component, self._atlas_thresdold)
+            save_components_as_nifti(X_without_mask.transpose(), self._tissue_binary_mask, data_mask, orig_shape,
+                                 self._output_dir, self._num_component)
         if self._extract_reconstruction_error == True:
             ## calculate the reconstruction error based on the masked image
             reconstruction_error(X_without_mask.transpose(), self._output_dir, self._num_component, data_mask)
@@ -233,7 +230,7 @@ class Post_OPNMF(WorkFlow):
         ## save the loading coefficient with masking.
         save_loading_coefficient(X_with_mask.transpose(), self._participant_tsv, self._output_dir, self._num_component)
         ## extract other metrics in the original image space, such as brain volume, shape or texture features
-        extract_atlas_mean_signal(self._participant_tsv, self._output_dir, self._num_component)
+        extract_atlas_signal(self._participant_tsv, self._output_dir, self._num_component)
 
 
 

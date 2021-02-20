@@ -626,7 +626,7 @@ def load_data_apply_mask(image_list, mask):
 
     return data, shape
 
-def save_components_as_nifti(X, example_img, data_mask, orig_shape, output_dir, num_component, atlas_threshold):
+def save_components_as_nifti(X, tissue_binary_mask, data_mask, orig_shape, output_dir, num_component):
     """
     Map the coefficient H of NMF back to image space for spatial visualization, also create the opNMF atlas based on the
     extracted components. Note, the atlas was created based on thresholding each column of the coefficient maxtrix: mask_threshold.
@@ -634,8 +634,8 @@ def save_components_as_nifti(X, example_img, data_mask, orig_shape, output_dir, 
     whose's intensity values are lower than 100.
 
     :param X:
-    :param example_img: By default, the first input image will be used if the template is not given.
-    :param data_mask:
+    :param tissue_binary_mask: By default, the first input image will be used if the template is not given.
+    :param tissue_binary_mask:
     :param orig_shape:
     :param output_dir:
     :param num_component:
@@ -645,7 +645,7 @@ def save_components_as_nifti(X, example_img, data_mask, orig_shape, output_dir, 
 
     ## grab the saved model and extract the W & H
     model_path = os.path.join(output_dir, 'NMF', 'component_' + str(num_component), "nmf_model.pickle")
-
+    tissue_mask = np.ma.make_mask(nib.load(tissue_binary_mask).get_data(caching='unchanged') == 1).ravel()
     file = open(model_path, 'rb')
     # dump information to that file
     data = pickle.load(file)
@@ -662,10 +662,10 @@ def save_components_as_nifti(X, example_img, data_mask, orig_shape, output_dir, 
         output_filename = os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'component_' + str(i+1) + '_map.nii.gz')
         data = revert_mask(W[i, :], data_mask, orig_shape)
         B[:, i] = data.flatten().transpose()
-        component_to_nifti(data, example_img, output_filename)
+        component_to_nifti(data, tissue_binary_mask, output_filename)
 
     ## save the components masked into one single mask image
-    component_to_opnmf_atlas(W, data_mask, example_img, orig_shape, output_dir, num_component, atlas_threshold)
+    component_to_opnmf_atlas(W, tissue_binary_mask, data_mask, orig_shape, output_dir, num_component)
 
     ## new loading coefficient
     C = np.matmul(B.transpose(), X)
@@ -715,16 +715,22 @@ def component_to_nifti(component, image, output_filename):
     output_image = nib.Nifti1Image(features, img_affine)
     nib.save(output_image, output_filename)
 
-def component_to_opnmf_atlas(W, data_mask, example_img, orig_shape, output_dir, num_component, atlas_threshold):
+def component_to_opnmf_atlas(W, tissue_binary_mask, data_mask, orig_shape, output_dir, num_component):
     """
     Convert all component images in original space by converting them to one single mask, i.e., the opnmf atlas
     :param C_original: components matrix in original space without
-    :param example_img:
+    :param tissue_binary_mask:
     :param orig_shape:
     :return:
     """
     ## turn the small values to be 0
     # W[W < 1e-3] = 0
+    ## to nifti image
+    img = nib.load(tissue_binary_mask)
+    img_affine = img.affine
+    img_data = img.get_data(caching='unchanged')
+    tissue_mask_img_shape = np.ma.make_mask(img_data == 1)
+    tissue_mask = tissue_mask_img_shape.ravel()
     final_component = []
     ## convert W's elements per column the max value to its index of the row + 1, the other row values to be 0
     for i in range(W.shape[1]):
@@ -738,13 +744,7 @@ def component_to_opnmf_atlas(W, data_mask, example_img, orig_shape, output_dir, 
     final_component = np.asarray(final_component)
     ## convert the binarized W into original image space
     final_component = revert_mask(final_component, data_mask, orig_shape)
-    ## to nifti image
-    img = nib.load(example_img)
-    img_affine = img.affine
-    img_data = img.get_data(caching='unchanged')
-    ## created the tissue mask based on the intensity of the example image
-    example_data_mask = np.ma.make_mask(img_data >= atlas_threshold)
-    final_component[~example_data_mask] = 0
+    final_component[~tissue_mask_img_shape] = 0
 
     output_image = nib.Nifti1Image(final_component, img_affine)
     nib.save(output_image, os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'components_atlas.nii.gz'))
@@ -994,7 +994,7 @@ def folder_not_exist_to_create(path):
     if not os.path.exists(path):
         os.makedirs(path, exist_ok=True)
 
-def extract_atlas_mean_signal(participant_tsv, output_dir, num_component):
+def extract_atlas_signal(participant_tsv, output_dir, num_component):
     """
     This is a function to extract the sum of values in each ROI in the opNMF-atals.
     """
@@ -1015,7 +1015,6 @@ def extract_atlas_mean_signal(participant_tsv, output_dir, num_component):
             data = nib.load(image)
             data = np.nan_to_num(data.get_data(caching='unchanged'))
             data[~data_mask] = 0
-            # mean = np.divide(np.sum(data), num_voxels_mask)  ## note that RAVENS maps has been scaled by 1000, thus should be divided by 1000 if input is RAVENS maps
             mean_value = np.sum(data) / np.sum(data_mask)## note that RAVENS maps has been scaled by 1000, thus should be divided by 1000 if input is RAVENS maps
             sum_value = np.sum(data)
             if math.isnan(mean_value) or math.isnan(sum_value):
