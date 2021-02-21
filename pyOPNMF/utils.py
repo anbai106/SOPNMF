@@ -645,7 +645,6 @@ def save_components_as_nifti(X, tissue_binary_mask, data_mask, orig_shape, outpu
 
     ## grab the saved model and extract the W & H
     model_path = os.path.join(output_dir, 'NMF', 'component_' + str(num_component), "nmf_model.pickle")
-    tissue_mask = np.ma.make_mask(nib.load(tissue_binary_mask).get_data(caching='unchanged') == 1).ravel()
     file = open(model_path, 'rb')
     # dump information to that file
     data = pickle.load(file)
@@ -730,7 +729,6 @@ def component_to_opnmf_atlas(W, tissue_binary_mask, data_mask, orig_shape, outpu
     img_affine = img.affine
     img_data = img.get_data(caching='unchanged')
     tissue_mask_img_shape = np.ma.make_mask(img_data == 1)
-    tissue_mask = tissue_mask_img_shape.ravel()
     final_component = []
     ## convert W's elements per column the max value to its index of the row + 1, the other row values to be 0
     for i in range(W.shape[1]):
