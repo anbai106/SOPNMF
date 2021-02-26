@@ -992,7 +992,7 @@ def folder_not_exist_to_create(path):
     if not os.path.exists(path):
         os.makedirs(path, exist_ok=True)
 
-def extract_atlas_signal(participant_tsv, output_dir, num_component):
+def extract_atlas_signal(participant_tsv, output_dir, num_component, output_suffix):
     """
     This is a function to extract the sum of values in each ROI in the opNMF-atals.
     """
@@ -1026,4 +1026,7 @@ def extract_atlas_signal(participant_tsv, output_dir, num_component):
         else:
             print("Component %d vanishes during opnmf-atlas creation..." % i)
     ## write to tsv files.
-    df_participant.to_csv(os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'atlas_components_signal.tsv'), index=False, sep='\t', encoding='utf-8')
+    if output_suffix == None:
+        df_participant.to_csv(os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'atlas_components_signal.tsv'), index=False, sep='\t', encoding='utf-8')
+    else:
+        df_participant.to_csv(os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'atlas_components_signal_' + output_suffix + '.tsv'), index=False, sep='\t', encoding='utf-8')

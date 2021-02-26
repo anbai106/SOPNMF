@@ -12,7 +12,7 @@ __status__ = "Development"
 
 
 def apply_to_training(output_dir, num_component, tissue_binary_mask, component_to_nii=True, extract_reconstruction_error=True,
-                      verbose=False):
+                      output_suffix=None, verbose=False):
     """
     After the model converges, we extract the componets in original image space for visualization, create the opNMF component-based atlas,
     calculate the loading coefficient matrix and reconstruction error.
@@ -22,6 +22,7 @@ def apply_to_training(output_dir, num_component, tissue_binary_mask, component_t
             the mask was made based on all images by taking off all 0 voxels, which is quite loose.
     :param component_to_nii: save components in nii images and create the atlas
     :param extract_reconstruction_error: calculate the reconstruction errors
+    :param output_suffix: str, the suffix to add to the output tsv files
     :param verbose: Default is False
     :return:
     """
@@ -30,13 +31,13 @@ def apply_to_training(output_dir, num_component, tissue_binary_mask, component_t
     print('Performing postprocessing for OPNMF using voxel-wise features...')
     participant_tsv = os.path.join(output_dir, 'NMF', 'participant.tsv')
     wf = Post_OPNMF(participant_tsv, output_dir, num_component, tissue_binary_mask=tissue_binary_mask, component_to_nii=component_to_nii,
-                    extract_reconstruction_error=extract_reconstruction_error, verbose=verbose)
+                    extract_reconstruction_error=extract_reconstruction_error, output_suffix=output_suffix, verbose=verbose)
 
     wf.run()
 
     print('Finish...')
 
-def apply_to_test(output_dir, num_component, participant_tsv, verbose=False):
+def apply_to_test(output_dir, num_component, participant_tsv, output_suffix=None, verbose=False):
     """
     Apply the trained model to external dataset. Both coefficient matrix and the signal based on the opNMF atlas will be extracted.
     :param participant_tsv: str, path to the participant tsv
@@ -49,7 +50,8 @@ def apply_to_test(output_dir, num_component, participant_tsv, verbose=False):
 
     ### For voxel approach
     print('Apply OPNMF to unseen test data...')
-    wf = Post_OPNMF(participant_tsv, output_dir, num_component, component_to_nii=False, extract_reconstruction_error=False, verbose=verbose)
+    wf = Post_OPNMF(participant_tsv, output_dir, num_component, component_to_nii=False, extract_reconstruction_error=False,
+                    output_suffix=output_suffix, verbose=verbose)
 
     wf.run()
 

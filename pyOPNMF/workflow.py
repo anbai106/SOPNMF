@@ -195,7 +195,7 @@ class Post_OPNMF(WorkFlow):
     """
 
     def __init__(self, participant_tsv, output_dir, num_component, tissue_binary_mask=None, component_to_nii=True,
-                 extract_reconstruction_error=False, verbose=False):
+                 extract_reconstruction_error=False, output_suffix=None, verbose=False):
 
         self._participant_tsv = participant_tsv
         self._output_dir = output_dir
@@ -203,6 +203,7 @@ class Post_OPNMF(WorkFlow):
         self._tissue_binary_mask = tissue_binary_mask
         self._component_to_nii = component_to_nii
         self._extract_reconstruction_error = extract_reconstruction_error
+        self._output_suffix = output_suffix
         self._verbose = verbose
 
     def run(self):
@@ -229,9 +230,10 @@ class Post_OPNMF(WorkFlow):
             reconstruction_error(X_without_mask.transpose(), self._output_dir, self._num_component, data_mask)
 
         ## save the loading coefficient with masking.
-        save_loading_coefficient(X_with_mask.transpose(), self._participant_tsv, self._output_dir, self._num_component)
+        save_loading_coefficient(X_with_mask.transpose(), self._participant_tsv, self._output_dir, self._num_component,
+                                 self._output_suffix)
         ## extract other metrics in the original image space, such as brain volume, shape or texture features
-        extract_atlas_signal(self._participant_tsv, self._output_dir, self._num_component)
+        extract_atlas_signal(self._participant_tsv, self._output_dir, self._num_component, self._output_suffix)
 
 
 
