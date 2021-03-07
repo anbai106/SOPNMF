@@ -38,12 +38,13 @@ class VB_Input(Input):
     """
     Class to read the input image
     """
-    def __init__(self, participant_tsv, output_dir, verbose=False):
+    def __init__(self, participant_tsv, output_dir, tissue_binary_mask, verbose=False):
         self._participant_tsv = participant_tsv
         self._output_dir = output_dir
+        self._tissue_binary_mask = tissue_binary_mask
         self._verbose = verbose
-        self._x = None
-        self._y = None
+        self._x_masked = None
+        self._x_orig = None
         self._images = None
 
         ## check the participant_tsv & covariate_tsv, the header, the order of the columns, etc
@@ -57,30 +58,12 @@ class VB_Input(Input):
 
     def get_x(self):
         """
-        Load all images.
+        Load all images with the tissue mask
         :return:
         """
-        self._x, self._orig_shape, self._data_mask = load_data(self._images, verbose=self._verbose, mask=True,)
+        self._x_orig, self._x_masked, self._orig_shape, self._data_mask = load_data(self._images, self._tissue_binary_mask, verbose=self._verbose, mask=True,)
 
-        return self._x, self._orig_shape, self._data_mask
-
-    def get_x_without_mask(self):
-        """
-        Load images without mask.
-        :return:
-        """
-        self._x, self._orig_shape, self._data_mask = load_data(self._images, verbose=self._verbose, mask=False)
-        return self._x, self._orig_shape, self._data_mask
-
-    def get_x_apply_mask(self):
-        """
-        Apply the mask to data
-        :return:
-        """
-        predefined_mask_path = os.path.join(self._output_dir, 'NMF', 'data_mask.pickle')
-        self._x, self._orig_shape = load_data_apply_mask(self._images, predefined_mask_path)
-
-        return self._x, self._orig_shape
+        return self._x_orig, self._x_masked, self._orig_shape, self._data_mask
 
 
 

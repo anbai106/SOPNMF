@@ -1,6 +1,6 @@
 from .base import WorkFlow
 from .utils import save_components_as_nifti, reconstruction_error, opnmf_solver, save_loading_coefficient, EarlyStopping, \
-    folder_not_exist_to_create, initialization_W, train, validate, MRIDataset, extract_atlas_signal
+    folder_not_exist_to_create, initialization_W, train, validate, extract_atlas_signal
 from .base import VB_Input
 import os, shutil
 import pickle
@@ -22,10 +22,11 @@ class VB_OPNMF(WorkFlow):
     Class for running OPNMF with voxel-wise images.
     """
 
-    def __init__(self, output_dir, participant_tsv, num_component_min, num_component_max, num_component_step,
+    def __init__(self, tissue_binary_mask, output_dir, participant_tsv, num_component_min, num_component_max, num_component_step,
                  init_method='NNDSVD', max_iter=50000, magnitude_tolerance=0, early_stopping_epoch=20, n_threads=8,
                  verbose=False):
 
+        self._tissue_binary_mask = tissue_binary_mask
         self._output_dir = output_dir
         self._participant_tsv = participant_tsv
         self._num_component_min = num_component_min
@@ -45,16 +46,9 @@ class VB_OPNMF(WorkFlow):
         ## cp the participant tsv for recording
         shutil.copyfile(self._participant_tsv, os.path.join(tsv_path, 'participant.tsv'))
 
-        VB_data = VB_Input(self._participant_tsv, self._output_dir, self._verbose)
+        VB_data = VB_Input(self._participant_tsv, self._output_dir, self._tissue_binary_mask, self._verbose)
         ## X size is: num_subjects * num_features
-        X, orig_shape, data_mask = VB_data.get_x()
-        # rank_X = np.linalg.matrix_rank(X)
-
-        ### save data mask for applying the model to unseen data.
-        example_dict = {'mask': data_mask}
-        pickle_out = open(os.path.join(self._output_dir, 'NMF', "data_mask.pickle"), "wb")
-        pickle.dump(example_dict, pickle_out)
-        pickle_out.close()
+        _,  X, orig_shape, data_mask = VB_data.get_x()
 
         async_result = {}
         c_list = list(range(self._num_component_min, self._num_component_max + self._num_component_step, self._num_component_step))
@@ -68,11 +62,6 @@ class VB_OPNMF(WorkFlow):
             log_dir = os.path.join(self._output_dir, 'log_dir', 'component_' + str(num_component))
             folder_not_exist_to_create(log_dir)
             metric_writer = SummaryWriter(log_dir=log_dir)
-
-            ## check if the number of components/rank is set correctly
-            # if num_component >= rank_X or num_component == 1:
-            #     print("The rank of the input matrix is %d" % rank_X)
-            #     raise Exception("Number of components should be set correctly, smaller than the rank of the feature maxtrix")
 
             ### check if the model has been trained to be converged.
             if os.path.exists(os.path.join(self._output_dir, 'NMF', 'component_' + str(num_component), "nmf_model.pickle")):
@@ -92,10 +81,11 @@ class VB_OPNMF_mini_batch(WorkFlow):
     Class for running OPNMF with voxel-wise images with mini-batch online learning.
     """
 
-    def __init__(self, output_dir, participant_tsv, participant_tsv_max_memory, num_component_min, num_component_max,
+    def __init__(self, tissue_binary_mask, output_dir, participant_tsv, participant_tsv_max_memory, num_component_min, num_component_max,
                  num_component_step=1, batch_size=8, init_method='NNDSVD', max_epoch=100, early_stopping_epoch=10, n_threads=8,
                  verbose=False):
 
+        self._tissue_binary_mask = tissue_binary_mask
         self._output_dir = output_dir
         self._participant_tsv = participant_tsv
         self._participant_tsv_max_memory = participant_tsv_max_memory
@@ -112,22 +102,15 @@ class VB_OPNMF_mini_batch(WorkFlow):
     def run(self):
         tsv_path = os.path.join(self._output_dir, 'NMF')
         folder_not_exist_to_create(tsv_path)
-
         ## cp the participant tsv for recording
         shutil.copyfile(self._participant_tsv, os.path.join(tsv_path, 'participant.tsv'))
-        VB_data = VB_Input(self._participant_tsv_max_memory, self._output_dir, self._verbose)
+        VB_data = VB_Input(self._participant_tsv_max_memory, self._output_dir, self._tissue_binary_mask, self._verbose)
         ## X size is: num_subjects * num_features
-        X_max, _, data_mask = VB_data.get_x()
+        _, X_max, _, _ = VB_data.get_x()
         ## check if NAN or INF in X
         if np.isfinite(X_max).all() == False:
             raise Exception("The input matrix contains NAN or INF elements...")
-        ### save data mask for applying the model to unseen data.
-        mask_dict = {'mask': data_mask}
-        pickle_out = open(os.path.join(self._output_dir, 'NMF', "data_mask.pickle"), "wb")
-        pickle.dump(mask_dict, pickle_out)
-        pickle_out.close()
 
-        # dataset = MRIDataset(self._participant_tsv, data_mask)
         c_list = list(range(self._num_component_min, self._num_component_max + self._num_component_step,
                             self._num_component_step))
         best_loss_valid = np.inf
@@ -161,10 +144,10 @@ class VB_OPNMF_mini_batch(WorkFlow):
                     W = initialization_W(X_max.transpose(), self._init_method, num_component)
 
                 for i in range(self._max_epoch):
-                    W, num_iteration = train(W, self._participant_tsv, self._batch_size, self._n_threads, i, self._output_dir,
+                    W, num_iteration = train(W, self._tissue_binary_mask, self._participant_tsv, self._batch_size, self._n_threads, i, self._output_dir,
                                              num_component, metric_writer, verbose=self._verbose)
 
-                    validate_loss = validate(W, self._participant_tsv, self._batch_size, self._output_dir, i, metric_writer)
+                    validate_loss = validate(W, self._tissue_binary_mask, self._participant_tsv, self._batch_size, self._output_dir, i, metric_writer)
 
                     # save the best model based on the best loss
                     is_best = validate_loss < best_loss_valid
@@ -194,7 +177,7 @@ class Post_OPNMF(WorkFlow):
     2) also unseen test data
     """
 
-    def __init__(self, participant_tsv, output_dir, num_component, tissue_binary_mask=None, component_to_nii=True,
+    def __init__(self, participant_tsv, output_dir, num_component, tissue_binary_mask, component_to_nii=True,
                  extract_reconstruction_error=False, output_suffix=None, verbose=False):
 
         self._participant_tsv = participant_tsv
@@ -207,14 +190,8 @@ class Post_OPNMF(WorkFlow):
         self._verbose = verbose
 
     def run(self):
-        ## grab the data mask based on the training data
-        data_mask_path = os.path.join(self._output_dir, 'NMF', 'data_mask.pickle')
-        file = open(data_mask_path, 'rb')
-        data_mask = pickle.load(file)['mask']
-        file.close()
-        VB_data = VB_Input(self._participant_tsv, self._output_dir, self._verbose)
-        X_with_mask, orig_shape = VB_data.get_x_apply_mask()
-        X_without_mask, _, _ = VB_data.get_x_without_mask()
+        VB_data = VB_Input(self._participant_tsv, self._output_dir, self._tissue_binary_mask, self._verbose)
+        X_without_mask, X_with_mask, orig_shape, data_mask = VB_data.get_x()
 
         if self._verbose:
             print("Data after applying mask: %s" % str(X_with_mask.shape))

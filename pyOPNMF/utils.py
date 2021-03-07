@@ -180,7 +180,7 @@ def opnmf_solver_mini_batch(X, W, output_dir, num_component, num_iteration, metr
 
     return W
 
-def train(W, participant_tsv, batch_size, n_threads, num_epoch, output_dir, num_component, metric_writer, verbose=True):
+def train(W, tissue_binary_mask, participant_tsv, batch_size, n_threads, num_epoch, output_dir, num_component, metric_writer, verbose=True):
     """
     Function to train the model in mini-batch mode
     :param W: numpy array
@@ -205,11 +205,10 @@ def train(W, participant_tsv, batch_size, n_threads, num_epoch, output_dir, num_
     num_batches = math.floor(df.shape[0] / batch_size)
     df = df.sample(frac=1)
     batches_list = np.array_split(df, num_batches)
-    predefined_mask_path = os.path.join(output_dir, 'NMF', 'data_mask.pickle')
 
     for j in range(len(batches_list)):
         img_list = list(batches_list[j]['path'])
-        imgs_mini_batch = load_data_apply_mask(img_list, predefined_mask_path)[0]
+        imgs_mini_batch = load_data_apply_mask(img_list, tissue_binary_mask)[0]
         t1 = time.time()
         print("Loading mini-batch data on CPU using time: ", t1 - t0)
 
@@ -228,7 +227,7 @@ def train(W, participant_tsv, batch_size, n_threads, num_epoch, output_dir, num_
     return W, num_iteration_current
 
 
-def validate(W, participant_tsv, batch_size, output_dir, i, metric_writer):
+def validate(W, tissue_binary_mask, participant_tsv, batch_size, output_dir, i, metric_writer):
     """
     FUnction to validate the model with whole dataset
     :param W: numpy array
@@ -245,11 +244,10 @@ def validate(W, participant_tsv, batch_size, output_dir, i, metric_writer):
     df = pd.read_csv(participant_tsv, sep='\t')
     num_batches = math.floor(df.shape[0] / batch_size)
     batches_list = np.array_split(df, num_batches)
-    predefined_mask_path = os.path.join(output_dir, 'NMF', 'data_mask.pickle')
 
     for j in range(len(batches_list)):
         img_list = list(batches_list[j]['path'])
-        imgs_mini_batch = load_data_apply_mask(img_list, predefined_mask_path)[0]
+        imgs_mini_batch = load_data_apply_mask(img_list, tissue_binary_mask)[0]
         if np.isfinite(imgs_mini_batch).all() == False:
             raise Exception("The input matrix contains NAN or INF elements...")
         mini_batch_loss_sqrt = np.sum(np.square(
@@ -538,7 +536,7 @@ def rand_pca(X, num_component, its, l, raw=True):
 
     return U, S, V
 
-def load_data(image_list, verbose=False, mask=True):
+def load_data(image_list, tissue_binary_mask, verbose=False, mask=True):
     """
     Load the image data with/without mask
     Args:
@@ -549,14 +547,15 @@ def load_data(image_list, verbose=False, mask=True):
     Returns:
 
     """
-    data = None
+    data_orig = None
+    data_masked = None
     shape = None
     data_mask = None
     first = True
 
     for i in range(len(image_list)):
         if verbose:
-            print('Loading image: %s with masking \n' % image_list[i])
+            print('Loading image: %s without applying mask \n' % image_list[i])
         if image_list[i].find('.nii.gz') != -1:
             subj = nib.load(image_list[i])
             subj_data = np.nan_to_num(subj.get_data(caching='unchanged'))
@@ -572,16 +571,21 @@ def load_data(image_list, verbose=False, mask=True):
 
         # Memory allocation for ndarray containing all data to avoid copying the array for each new subject
         if first:
-            data = np.ndarray(shape=(len(image_list), subj_data.shape[0]), dtype='float32', order='C')
+            data_orig = np.ndarray(shape=(len(image_list), subj_data.shape[0]), dtype='float32', order='C')
             first = False
 
-        data[i, :] = subj_data
+        data_orig[i, :] = subj_data
 
     if mask:
-        data_mask = (np.not_equal(data, np.asarray([0]))).sum(axis=0) != 0
-        data = data[:, data_mask]
+        img = nib.load(tissue_binary_mask)
+        img_data = img.get_data(caching='unchanged')
+        data_mask = np.ma.make_mask(img_data == 1).flatten()
 
-    return data, shape, data_mask
+        ## this is the old way to define the population data-based mask, but maybe too loose, thus more noisy in data.
+        # data_mask = (np.not_equal(data, np.asarray([0]))).sum(axis=0) != 0
+        data_masked = data_orig[:, data_mask]
+
+    return data_orig, data_masked, shape, data_mask
 
 def load_data_apply_mask(image_list, mask):
     """
@@ -618,11 +622,11 @@ def load_data_apply_mask(image_list, mask):
             first = False
 
         data[i, :] = subj_data
-     
-    file = open(mask, 'rb')
-    mask = pickle.load(file)['mask']
-    file.close()
-    data = data[:, mask]
+
+    img = nib.load(mask)
+    img_data = img.get_data(caching='unchanged')
+    data_mask = np.ma.make_mask(img_data == 1).flatten()
+    data = data[:, data_mask]
 
     return data, shape
 
@@ -947,42 +951,6 @@ def calculate_reproducibility_index(opnmf_output_dir, num_component_min, num_com
         ## write to tsv file
         df.to_csv(os.path.join(reproducibility_path_1, 'reproducibility_index.tsv'), index=False, sep='\t', encoding='utf-8')
 
-class MRIDataset(Dataset):
-    """Dataset of MRI"""
-
-    def __init__(self, participant_tsv, mask):
-        """
-        :param participant_tsv: str, path to the participant tsv
-        :param mask: predefined mask pickle file based on subpopulation for memory limitation
-        """
-        self._participant_tsv = participant_tsv
-        self._mask = mask
-        self._df = pd.read_csv(participant_tsv, sep='\t')
-        if ('participant_id' not in list(self._df.columns.values)) or (
-                'session_id' not in list(self._df.columns.values)) or \
-                ('path' not in list(self._df.columns.values)):
-            raise Exception("the data file is not in the correct format."
-                            "Columns should include ['participant_id', 'session_id', 'path']")
-
-    def __len__(self):
-        return len(self._df)
-
-    def __getitem__(self, idx):
-        img_name = self._df.loc[idx, 'participant_id']
-        sess_name = self._df.loc[idx, 'session_id']
-        image_path = self._df.loc[idx, 'path']
-        if image_path.find('.nii.gz') != -1:
-            subj = nib.load(image_path)
-            subj_data = np.nan_to_num(subj.get_data(caching='unchanged'))
-        elif image_path.find('.pt') != -1:
-            subj_data = torch.load(image_path)
-            subj_data = np.squeeze(subj_data.cpu().detach().numpy())
-        image = np.nan_to_num(subj_data).flatten().astype('float32')
-        image = image[self._mask] ## apply mask to single image, not to multiple image data[:, mask]
-        sample = {'image': image, 'participant_id': img_name, 'session_id': sess_name}
-
-        return sample
-
 def folder_not_exist_to_create(path):
     """
     Check if folder exist, if not, create it
@@ -1030,3 +998,39 @@ def extract_atlas_signal(participant_tsv, output_dir, num_component, output_suff
         df_participant.to_csv(os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'atlas_components_signal.tsv'), index=False, sep='\t', encoding='utf-8')
     else:
         df_participant.to_csv(os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'atlas_components_signal_' + output_suffix + '.tsv'), index=False, sep='\t', encoding='utf-8')
+
+# class MRIDataset(Dataset):
+#     """Dataset of MRI"""
+#
+#     def __init__(self, participant_tsv, mask):
+#         """
+#         :param participant_tsv: str, path to the participant tsv
+#         :param mask: predefined mask pickle file based on subpopulation for memory limitation
+#         """
+#         self._participant_tsv = participant_tsv
+#         self._mask = mask
+#         self._df = pd.read_csv(participant_tsv, sep='\t')
+#         if ('participant_id' not in list(self._df.columns.values)) or (
+#                 'session_id' not in list(self._df.columns.values)) or \
+#                 ('path' not in list(self._df.columns.values)):
+#             raise Exception("the data file is not in the correct format."
+#                             "Columns should include ['participant_id', 'session_id', 'path']")
+#
+#     def __len__(self):
+#         return len(self._df)
+#
+#     def __getitem__(self, idx):
+#         img_name = self._df.loc[idx, 'participant_id']
+#         sess_name = self._df.loc[idx, 'session_id']
+#         image_path = self._df.loc[idx, 'path']
+#         if image_path.find('.nii.gz') != -1:
+#             subj = nib.load(image_path)
+#             subj_data = np.nan_to_num(subj.get_data(caching='unchanged'))
+#         elif image_path.find('.pt') != -1:
+#             subj_data = torch.load(image_path)
+#             subj_data = np.squeeze(subj_data.cpu().detach().numpy())
+#         image = np.nan_to_num(subj_data).flatten().astype('float32')
+#         image = image[self._mask] ## apply mask to single image, not to multiple image data[:, mask]
+#         sample = {'image': image, 'participant_id': img_name, 'session_id': sess_name}
+#
+#         return sample
