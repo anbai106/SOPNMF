@@ -966,17 +966,16 @@ def extract_atlas_signal(participant_tsv, output_dir, num_component, output_suff
     """
     df_participant = pd.read_csv(participant_tsv, sep='\t')
     paths = list(df_participant['path'])
-    ## read the component image and create the masks
-    component_path = os.path.join(output_dir, 'NMF', 'component_' + str(num_component), "components_atlas.nii.gz")
-    subj = nib.load(component_path)
-    subj_data = np.nan_to_num(subj.get_data(caching='unchanged'))
+    ## read the opnmf atlas image
+    atlas_path = os.path.join(output_dir, 'NMF', 'component_' + str(num_component), "components_atlas.nii.gz")
+    atlas = nib.load(atlas_path)
+    atlas_data = np.nan_to_num(atlas.get_data(caching='unchanged'))
     for i in range(1, num_component + 1):
         values_mean = []
         values_sum = []
         # create the masks
-        data_mask = np.ma.make_mask(subj_data == i)
-        # num_voxels_mask = np.sum(data_mask)
-        ## read the original image 
+        data_mask = np.ma.make_mask(atlas_data == i)
+        ## read the original image
         for image in paths:
             data = nib.load(image)
             data = np.nan_to_num(data.get_data(caching='unchanged'))
@@ -998,39 +997,3 @@ def extract_atlas_signal(participant_tsv, output_dir, num_component, output_suff
         df_participant.to_csv(os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'atlas_components_signal.tsv'), index=False, sep='\t', encoding='utf-8')
     else:
         df_participant.to_csv(os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'atlas_components_signal_' + output_suffix + '.tsv'), index=False, sep='\t', encoding='utf-8')
-
-# class MRIDataset(Dataset):
-#     """Dataset of MRI"""
-#
-#     def __init__(self, participant_tsv, mask):
-#         """
-#         :param participant_tsv: str, path to the participant tsv
-#         :param mask: predefined mask pickle file based on subpopulation for memory limitation
-#         """
-#         self._participant_tsv = participant_tsv
-#         self._mask = mask
-#         self._df = pd.read_csv(participant_tsv, sep='\t')
-#         if ('participant_id' not in list(self._df.columns.values)) or (
-#                 'session_id' not in list(self._df.columns.values)) or \
-#                 ('path' not in list(self._df.columns.values)):
-#             raise Exception("the data file is not in the correct format."
-#                             "Columns should include ['participant_id', 'session_id', 'path']")
-#
-#     def __len__(self):
-#         return len(self._df)
-#
-#     def __getitem__(self, idx):
-#         img_name = self._df.loc[idx, 'participant_id']
-#         sess_name = self._df.loc[idx, 'session_id']
-#         image_path = self._df.loc[idx, 'path']
-#         if image_path.find('.nii.gz') != -1:
-#             subj = nib.load(image_path)
-#             subj_data = np.nan_to_num(subj.get_data(caching='unchanged'))
-#         elif image_path.find('.pt') != -1:
-#             subj_data = torch.load(image_path)
-#             subj_data = np.squeeze(subj_data.cpu().detach().numpy())
-#         image = np.nan_to_num(subj_data).flatten().astype('float32')
-#         image = image[self._mask] ## apply mask to single image, not to multiple image data[:, mask]
-#         sample = {'image': image, 'participant_id': img_name, 'session_id': sess_name}
-#
-#         return sample
