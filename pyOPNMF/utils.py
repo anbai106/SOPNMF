@@ -555,7 +555,7 @@ def load_data(image_list, tissue_binary_mask, verbose=False, mask=True):
 
     for i in range(len(image_list)):
         if verbose:
-            print('Loading image: %s without applying mask \n' % image_list[i])
+            print('Loading image: %s \n' % image_list[i])
         if image_list[i].find('.nii.gz') != -1:
             subj = nib.load(image_list[i])
             subj_data = np.nan_to_num(subj.get_data(caching='unchanged'))
@@ -661,12 +661,6 @@ def save_components_as_nifti(X, tissue_binary_mask, data_mask, orig_shape, outpu
     #### convert W back to original image space, by adding background to 0 in the components
     B = np.zeros((orig_shape[0] * orig_shape[1] * orig_shape[2], W.shape[0]))
 
-    for i in range(W.shape[0]):
-        output_filename = os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'component_' + str(i+1) + '_map.nii.gz')
-        data = revert_mask(W[i, :], data_mask, orig_shape)
-        B[:, i] = data.flatten().transpose()
-        component_to_nifti(data, tissue_binary_mask, output_filename)
-
     ## save the components masked into one single mask image
     component_to_opnmf_atlas(W, tissue_binary_mask, data_mask, orig_shape, output_dir, num_component)
 
@@ -736,12 +730,18 @@ def component_to_opnmf_atlas(W, tissue_binary_mask, data_mask, orig_shape, outpu
     final_component = []
     ## convert W's elements per column the max value to its index of the row + 1, the other row values to be 0
     for i in range(W.shape[1]):
-        if not np.any(W[:, i]):
+        if not np.any(W[:, i]): ## if all values are 0, this voxel belongs to the background
             final_component.append(0)
         else:
             ## binarize the column, max to be its row index and the other to be 0.
             max_index = np.argmax(W[:, i]) + 1
             final_component.append(max_index)
+
+    for i in range(W.shape[0]):
+        output_filename = os.path.join(os.path.join(output_dir, 'NMF', 'component_' + str(num_component)), 'component_' + str(i+1) + '.nii.gz')
+        W_binarized = [1 if e == i+1 else 0 for e in final_component]
+        data = revert_mask(W_binarized, data_mask, orig_shape)
+        component_to_nifti(data, tissue_binary_mask, output_filename)
 
     final_component = np.asarray(final_component)
     ## convert the binarized W into original image space
