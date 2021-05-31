@@ -1,4 +1,4 @@
-from .workflow import VB_OPNMF, VB_OPNMF_mini_batch
+from opnmf.workflow import VB_OPNMF, VB_OPNMF_mini_batch
 
 __author__ = "Junhao Wen"
 __copyright__ = "Copyright 2019 The CBICA & SBIA Lab"
@@ -19,7 +19,7 @@ def opnmf(participant_tsv, output_dir, tissue_binary_mask, num_component_min, nu
                                  "ii) the second column should be the session_id;"
                                  "iii) the third column should be the path, image path for each subject"
     :param output_dir: str, path to the output folder
-    :param tissue_binary_mask: str. This is a tissue binary mask that contrains the voxels only in desired regions. During training,
+    :param tissue_binary_mask: str. This is a tissue binary mask that constrains the voxels only in desired regions. During training,
             the mask was made based on all images by taking off all 0 voxels, which is quite loose. In the new code, we force to use
             a tissue binary mask created either from the template image or from the population based mean image.
     :param num_component_min: int, the minimum number of components
@@ -45,8 +45,8 @@ def opnmf(participant_tsv, output_dir, tissue_binary_mask, num_component_min, nu
     print('Finish...')
 
 def sopnmf(participant_tsv, participant_tsv_max_memory, output_dir, tissue_binary_mask, num_component_min, num_component_max,
-                     num_component_step=1, batch_size=8, max_epoch=50000, init_method='NNDSVDRandomSVD', early_stopping_epoch=100,
-                     n_threads=8, verbose=False):
+                     num_component_step=1, batch_size=8, max_epoch=50000, init_method='NNDSVDRandomSVD', magnitude_tolerance=0,
+                     early_stopping_epoch=100, n_threads=8, verbose=False):
     """
     Core function of sopNMF algorithm. Train the model like a deep learning model. Normally, with smaller batch size, it converges faster,
     since reading the batch data by CPU is less time-consuming (even though your models will have to run more iterations).
@@ -55,8 +55,7 @@ def sopnmf(participant_tsv, participant_tsv_max_memory, output_dir, tissue_binar
                                  "i) the first column is the participant_id;"
                                  "ii) the second column should be the session_id;"
                                  "iii) the third column should be the path, image path for each subject"
-    :param participant_tsv_max_memory: str, path to the tsv containing the maximum number of sub-population for the creation
-    of the mask and initialization of W matrix
+    :param participant_tsv_max_memory: str, path to the tsv containing the maximum number of sub-population for the create of the mask and initialization of W matrix
     :param output_dir: str, path to the output folder
     :param tissue_binary_mask: str. This is a tissue binary mask that contrains the voxels only in desired regions. During training,
         the mask was made based on all images by taking off all 0 voxels, which is quite loose. In the new code, we force to use
@@ -77,7 +76,7 @@ def sopnmf(participant_tsv, participant_tsv_max_memory, output_dir, tissue_binar
     print('Performing OPNMF for voxel-wise features...')
     # ## Here, semi-supervised clustering
     wf = VB_OPNMF_mini_batch(tissue_binary_mask, output_dir, participant_tsv, participant_tsv_max_memory, num_component_min, num_component_max,
-                             num_component_step, batch_size, init_method, max_epoch, early_stopping_epoch, n_threads, verbose)
+                             num_component_step, batch_size, init_method, max_epoch, magnitude_tolerance, early_stopping_epoch, n_threads, verbose)
 
     wf.run()
 

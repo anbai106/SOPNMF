@@ -1,13 +1,13 @@
-from .base import WorkFlow
-from .utils import save_components_as_nifti, reconstruction_error, opnmf_solver, save_loading_coefficient, EarlyStopping, \
+from opnmf.base import WorkFlow
+from opnmf.utils import save_components_as_nifti, reconstruction_error, opnmf_solver, save_loading_coefficient, EarlyStopping, \
     folder_not_exist_to_create, initialization_W, train, validate, extract_atlas_signal
-from .base import VB_Input
+from opnmf.base import VB_Input
 import os, shutil
 import pickle
 from multiprocessing.pool import ThreadPool
 from tensorboardX import SummaryWriter
 import numpy as np
-import nibabel as nib
+
 __author__ = "Junhao Wen"
 __copyright__ = "Copyright 2019 The CBICA & SBIA Lab"
 __credits__ = ["Junhao Wen"]
@@ -82,8 +82,8 @@ class VB_OPNMF_mini_batch(WorkFlow):
     """
 
     def __init__(self, tissue_binary_mask, output_dir, participant_tsv, participant_tsv_max_memory, num_component_min, num_component_max,
-                 num_component_step=1, batch_size=8, init_method='NNDSVD', max_epoch=100, early_stopping_epoch=10, n_threads=8,
-                 verbose=False):
+                 num_component_step=1, batch_size=8, init_method='NNDSVD', max_epoch=100, magnitude_tolerance=0,
+                 early_stopping_epoch=10, n_threads=8, verbose=False):
 
         self._tissue_binary_mask = tissue_binary_mask
         self._output_dir = output_dir
@@ -95,6 +95,7 @@ class VB_OPNMF_mini_batch(WorkFlow):
         self._batch_size = batch_size
         self._init_method = init_method
         self._max_epoch = max_epoch
+        self._magnitude_tolerance = magnitude_tolerance
         self._early_stopping_epoch = early_stopping_epoch
         self._n_threads = n_threads
         self._verbose = verbose
@@ -126,7 +127,7 @@ class VB_OPNMF_mini_batch(WorkFlow):
                 print("This number of components have been trained and converged: %d" % num_component)
             else:
                 # initialize the early stopping instance
-                early_stopping = EarlyStopping('loss', min_delta=0, patience_epoch=self._early_stopping_epoch)
+                early_stopping = EarlyStopping('loss', min_delta=self._magnitude_tolerance, patience_epoch=self._early_stopping_epoch)
                 component_path = os.path.join(self._output_dir, 'NMF', 'component_' + str(num_component))
                 print("Train OPNMF for %d components" % num_component)
                 ### check if the intermediate model exist, if yes, no need to initialize the W matrix

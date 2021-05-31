@@ -1,7 +1,6 @@
 import abc
 import pandas as pd
-from .utils import load_data, load_data_apply_mask
-import os
+from opnmf.utils import load_data
 
 __author__ = "Junhao Wen"
 __copyright__ = "Copyright 2019 The CBICA & SBIA Lab"

@@ -1,4 +1,4 @@
-from .workflow import Post_OPNMF
+from opnmf.workflow import Post_OPNMF
 import os
 
 __author__ = "Junhao Wen"
