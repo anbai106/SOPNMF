@@ -664,6 +664,10 @@ def save_components_as_nifti(X, tissue_binary_mask, data_mask, orig_shape, outpu
     ## save the components masked into one single mask image
     component_to_opnmf_atlas(W, tissue_binary_mask, data_mask, orig_shape, output_dir, num_component)
 
+    for i in range(W.shape[0]):
+        data = revert_mask(W[i, :], data_mask, orig_shape)
+        B[:, i] = data.flatten().transpose()
+
     ## new loading coefficient
     C = np.matmul(B.transpose(), X)
 
