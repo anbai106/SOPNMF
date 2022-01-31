@@ -5,7 +5,7 @@ In a nutshell, **OPNMF** has three algorithms: i) original opNMF model, ii) sopN
 ![image info](data/opNMF.png)
 
 ## License
-Copyright (c) 2016 University of Pennsylvania. All rights reserved. See https://www.cbica.upenn.edu/sbia/software/license.html.
+Copyright (c) 2016 University of Pennsylvania. All rights reserved. Please refer to https://www.cbica.upenn.edu/sbia/software/license.html.
 
 ## Installation
 [Ananconda](https://www.anaconda.com/products/individual) allows you to install, run and update python package and their dependencies. We highly recommend the users to install **Anancond3** on your machine.
@@ -91,5 +91,5 @@ apply_to_test(output_dir, num_component, tissue_binary_mask, participant_tsv, ve
 ## Citing this work
 > Sotiras, A., Resnick, S.M. and Davatzikos, C., 2015. **Finding imaging patterns of structural covariance via non-negative matrix factorization**. Neuroimage, 108, pp.1-16. [doi:10.1016/j.neuroimage.2014.11.045](https://www.sciencedirect.com/science/article/pii/S1053811914009756?via%3Dihub)
 
-## Usage demonstration
-> Wen, J., Varol, E., Davatzikos, C., 2021. **Multi-scale semi-supervised clustering of brain images: deriving disease subtypes**. Submitted to MedIA. - [Link](https://www.biorxiv.org/content/10.1101/2021.04.19.440501v1)
+## Publications around OPNMF
+> Wen, J., Varol, E., Sotiras, A., Yang, Z., Chand, G.B., Erus, G., Shou, H., Abdulkadir, A., Hwang, G., Dwyer, D.B. and Pigoni, A., 2022. Multi-scale semi-supervised clustering of brain images: deriving disease subtypes. Medical Image Analysis, 75, p.102304. - [Link](https://scholar.google.com/citations?view_op=view_citation&hl=en&user=4Wq_FukAAAAJ&sortby=pubdate&citation_for_view=4Wq_FukAAAAJ:9ZlFYXVOiuMC)
