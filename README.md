@@ -1,7 +1,5 @@
 # `OPNMF`
-**OPNMF** is the fast python implementation of the Orthogonal Projective Non-negative Matrix Factorization: [brainparts](https://github.com/asotiras/brainparts). Compared to the matlab implementation, OPNMF is much computationally faster and extends to its stochastic version to overcome the memory limitation and to its semi version to deal with mixed-sign signals.
-
-In a nutshell, **OPNMF** has three algorithms: i) original opNMF model, ii) sopNMF, and iii) semi-opNMF.
+**OPNMF** is the fast python implementation of the Matlab version of Orthogonal Projective Non-negative Matrix Factorization: [brainparts](https://github.com/asotiras/brainparts). Compared to the original implementation, OPNMF is much computationally faster and extends to its stochastic version (sopNMF) to overcome the memory limitations. See a schematic figure below for this matrix factorization algorithm:
 ![image info](data/opNMF.png)
 
 ## License
@@ -9,7 +7,7 @@ Copyright (c) 2016 University of Pennsylvania. All rights reserved. Please refer
 
 ## Installation
 [Ananconda](https://www.anaconda.com/products/individual) allows you to install, run and update python package and their dependencies. We highly recommend the users to install **Anancond3** on your machine.
-After installing Anaconda3, there are three choices to use OPNMF.
+After installing Anaconda3, wo provide three ways to use OPNMF.
 ### Use OPNMF as a python package
 We recommend the users to use Conda virtual environment:
 ```
@@ -23,12 +21,12 @@ Install other python package dependencies (go to the root folder of OPNMF):
 ```
 3) ./install_requirements.sh
 ```
-Finally, we need install OPNMF from PyPi (**Not yet avaible now, but you can run the functions after step 3)**):
+Finally, we need install OPNMF from PyPi (**TODO, push to Pypi after submitting the paper)**):
 ```
 4) pip install pyOPNMF==0.0.1
 ```
 
-### Use OPNMF from commandline:
+### Use OPNMF from command line in a termninal:
 ```
 pip install -e .
 ```
