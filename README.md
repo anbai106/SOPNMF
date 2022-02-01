@@ -1,5 +1,6 @@
 # `OPNMF`
 **OPNMF** is the fast python implementation of the Matlab version of Orthogonal Projective Non-negative Matrix Factorization: [brainparts](https://github.com/asotiras/brainparts). Compared to the original implementation, OPNMF is much computationally faster and extends to its stochastic version (sopNMF) to overcome the memory limitations. See a schematic figure below for this matrix factorization algorithm:
+
 ![image info](data/opNMF.png)
 
 ## License
