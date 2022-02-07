@@ -1,44 +1,42 @@
-# `OPNMF`
-**OPNMF** is the fast python implementation of the Matlab version of Orthogonal Projective Non-negative Matrix Factorization: [brainparts](https://github.com/asotiras/brainparts). Compared to the original implementation, OPNMF is much computationally faster and extends to its stochastic version (sopNMF) to overcome the memory limitations. See a schematic figure below for this matrix factorization algorithm:
-
-![image info](data/opNMF.png)
+# `sopNMF`
+**sopNMF** is the python implementation of the Matlab version of Orthogonal Projective Non-negative Matrix Factorization: [brainparts](https://github.com/asotiras/brainparts), and its extension stochastic version (sopNMF) to overcome the memory limitations.
 
 ## License
 Copyright (c) 2016 University of Pennsylvania. All rights reserved. Please refer to https://www.cbica.upenn.edu/sbia/software/license.html.
 
 ## Installation
 [Ananconda](https://www.anaconda.com/products/individual) allows you to install, run and update python package and their dependencies. We highly recommend the users to install **Anancond3** on your machine.
-After installing Anaconda3, wo provide three ways to use OPNMF.
+After installing Anaconda3, wo provide three ways to use sopNMF.
 ### Use OPNMF as a python package
 We recommend the users to use Conda virtual environment:
 ```
-1) conda create --name OPNMF python=3.6
+1) conda create --name sopNMF python=3.6
 ```
 Activate the virtual environment:
 ```
-2) source activate OPNMF
+2) source activate sopNMF
 ```
-Install other python package dependencies (go to the root folder of OPNMF):
+Install other python package dependencies (go to the root folder of sopNMF):
 ```
 3) ./install_requirements.sh
 ```
-Finally, we need install OPNMF from PyPi (**TODO, push to Pypi after submitting the paper)**):
+Finally, we need install sopNMF from PyPi:
 ```
-4) pip install pyOPNMF==0.0.1
+4) pip install sopnmf==0.0.1
 ```
 
-### Use OPNMF from command line in a termninal:
+### Use sopNMF from command line in a termninal:
 ```
 pip install -e .
 ```
 
-### Use OPNMF as a developer version:
+### Use sopNMF as a developer version:
 ```
-python -m pip install git+https://github.com/anbai106/OPNMF.git
+python -m pip install git+https://github.com/anbai106/SOPNMF.git
 ```
 
 ## Input structure
-OPNMF requires the input (*participant_tsv*) to be a specific structure inspired by [BIDS](https://bids.neuroimaging.io/). The 3 columns in the tsv are **participant_id**, **session_id** and **path**, respectively.
+sopNMF requires the input (*participant_tsv*) to be a specific structure inspired by [BIDS](https://bids.neuroimaging.io/). The 3 columns in the tsv are **participant_id**, **session_id** and **path**, respectively.
 
 Example for participant tsv:
 ```
@@ -55,7 +53,7 @@ sub-CLNC0008      ses-M00      absolute_path
 
 ## Examples for usage
 
-### First, training the original opNMF (soNMF or semi-opNMF):
+### First, training the original opNMF model:
 ```
 from opnmf.opnmf_core import opnmf
 participant_tsv="path_to_participant_tsv"
@@ -90,5 +88,5 @@ apply_to_test(output_dir, num_component, tissue_binary_mask, participant_tsv, ve
 ## Citing this work
 > Sotiras, A., Resnick, S.M. and Davatzikos, C., 2015. **Finding imaging patterns of structural covariance via non-negative matrix factorization**. Neuroimage, 108, pp.1-16. [doi:10.1016/j.neuroimage.2014.11.045](https://www.sciencedirect.com/science/article/pii/S1053811914009756?via%3Dihub)
 
-## Publications around OPNMF
+## Publications around sopNMF
 > Wen, J., Varol, E., Sotiras, A., Yang, Z., Chand, G.B., Erus, G., Shou, H., Abdulkadir, A., Hwang, G., Dwyer, D.B. and Pigoni, A., 2022. Multi-scale semi-supervised clustering of brain images: deriving disease subtypes. Medical Image Analysis, 75, p.102304. - [Link](https://scholar.google.com/citations?view_op=view_citation&hl=en&user=4Wq_FukAAAAJ&sortby=pubdate&citation_for_view=4Wq_FukAAAAJ:9ZlFYXVOiuMC)
