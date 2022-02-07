@@ -4,18 +4,18 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="opnmf",
+    name="sopnmf",
     version="0.0.1",
     author="junhao.wen",
     author_email="junhao.wen89@email.com",
     description=" Orthogonal Projective Non-negative Matrix Factorization",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/anbai106/OPNMF",
+    url="https://github.com/anbai106/SOPNMF",
     packages=setuptools.find_packages(),
     entry_points={
         'console_scripts': [
-            'opnmf = opnmf.main:main',
+            'sopnmf = sopnmf.main:main',
         ],
     },
     classifiers=(
