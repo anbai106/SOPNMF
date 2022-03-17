@@ -18,7 +18,7 @@ def opnmf_func(args):
     Returns:
 
     """
-    from opnmf.opnmf_core import opnmf
+    from sopnmf.opnmf_core import opnmf
     opnmf(
         args.participant_tsv,
         args.output_dir,
@@ -42,7 +42,7 @@ def sopnmf_func(args):
     Returns:
 
     """
-    from opnmf.opnmf_core import sopnmf
+    from sopnmf.opnmf_core import sopnmf
     sopnmf(
         args.participant_tsv,
         args.participant_tsv_max_memory,
@@ -68,7 +68,7 @@ def apply_to_train_func(args):
     Returns:
 
     """
-    from opnmf.opnmf_post import apply_to_training
+    from sopnmf.opnmf_post import apply_to_training
     apply_to_training(
         args.output_dir,
         args.num_component,
@@ -86,7 +86,7 @@ def apply_to_test_func(args):
     Returns:
 
     """
-    from opnmf.opnmf_post import apply_to_test
+    from sopnmf.opnmf_post import apply_to_test
     apply_to_test(
         args.output_dir,
         args.num_component,
@@ -104,13 +104,13 @@ def parse_command_line():
     """
 
     parser = argparse.ArgumentParser(
-        prog='OPNMF',
+        prog='sopnmf',
         description='Orthogonal Projective Non-negative Matrix Factorization for interpretable neuroimaging analysis.')
 
     subparser = parser.add_subparsers(
         title='''Algorithm to run per needs:''',
         description='''Which algorithm do you want to use with OPNMF?
-            (opnmf, sopnmf, apply_train, apply_test).''',
+            (sopnmf, sopnmf, apply_train, apply_test).''',
         dest='algorithm',
         help='''****** Algorithm proposed by OPNMF ******''')
 

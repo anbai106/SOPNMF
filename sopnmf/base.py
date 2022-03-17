@@ -1,6 +1,6 @@
 import abc
 import pandas as pd
-from opnmf.utils import load_data
+from sopnmf.utils import load_data
 
 __author__ = "Junhao Wen"
 __copyright__ = "Copyright 2019 The CBICA & SBIA Lab"

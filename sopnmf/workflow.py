@@ -1,7 +1,7 @@
-from opnmf.base import WorkFlow
-from opnmf.utils import save_components_as_nifti, reconstruction_error, opnmf_solver, save_loading_coefficient, EarlyStopping, \
+from sopnmf.base import WorkFlow
+from sopnmf.utils import save_components_as_nifti, reconstruction_error, opnmf_solver, save_loading_coefficient, EarlyStopping, \
     folder_not_exist_to_create, initialization_W, train, validate, extract_atlas_signal
-from opnmf.base import VB_Input
+from sopnmf.base import VB_Input
 import os, shutil
 import pickle
 from multiprocessing.pool import ThreadPool

@@ -1,4 +1,4 @@
-from opnmf import cli
+from sopnmf import cli
 
 __author__ = "Junhao Wen"
 __copyright__ = "Copyright 2019-2020 The CBICA & SBIA Lab"

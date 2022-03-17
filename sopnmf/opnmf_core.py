@@ -1,4 +1,4 @@
-from opnmf.workflow import VB_OPNMF, VB_OPNMF_mini_batch
+from sopnmf.workflow import VB_OPNMF, VB_OPNMF_mini_batch
 
 __author__ = "Junhao Wen"
 __copyright__ = "Copyright 2019 The CBICA & SBIA Lab"
