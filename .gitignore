@@ -5,6 +5,8 @@
 # Setuptools distribution folder.
 /dist/
 /build/
+/docs/
+/venv/
 
 test.py
  

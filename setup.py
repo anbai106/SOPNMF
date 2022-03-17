@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="sopnmf",
+    name="SOPNMF",
     version="0.0.1",
     author="junhao.wen",
     author_email="junhao.wen89@email.com",
@@ -15,7 +15,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     entry_points={
         'console_scripts': [
-            'sopnmf = sopnmf.main:main',
+            'opnmf = opnmf.main:main',
         ],
     },
     classifiers=(
