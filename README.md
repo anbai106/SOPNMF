@@ -56,7 +56,7 @@ sub-CLNC0008      ses-M00      absolute_path
 
 ### First, training the original opNMF model:
 ```
-from opnmf.opnmf_core import opnmf
+from sopnmf.opnmf_core import opnmf
 participant_tsv="path_to_participant_tsv"
 output_dir = "path_output_dir"
 tissue_binary_mask = "path_to_tissue_mask"
@@ -69,7 +69,7 @@ opnmf(participant_tsv, output_dir, tissue_binary_mask, num_component_min, num_co
 
 ### Second, applying the trained model to the training data for post-analyses:
 ```
-from opnmf.opnmf_post import apply_to_training
+from sopnmf.opnmf_post import apply_to_training
 output_dir = "path_output_dir"
 tissue_binary_mask = "path_to_tissue_mask"
 num_component = 2
@@ -78,7 +78,7 @@ apply_to_training(output_dir, num_component, tissue_binary_mask, verbose=True)
 
 ### Last, you may also apply the trained model to unseen test data:
 ```
-from opnmf.opnmf_post import apply_to_test
+from sopnmf.opnmf_post import apply_to_test
 participant_tsv="path_to_participant_tsv"
 tissue_binary_mask = "path_to_tissue_mask"
 num_component = 2
