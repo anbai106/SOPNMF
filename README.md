@@ -6,7 +6,7 @@ Copyright (c) 2016 University of Pennsylvania. All rights reserved. Please refer
 
 ## Installation
 [Ananconda](https://www.anaconda.com/products/individual) allows you to install, run and update python package and their dependencies. We highly recommend the users to install **Anancond3** on your machine.
-After installing Anaconda3, wo provide three ways to use sopNMF.
+After installing Anaconda3, we provide **three alternative ways** to use sopNMF.
 ### Use OPNMF as a python package
 We recommend the users to use Conda virtual environment:
 ```
@@ -16,7 +16,7 @@ Activate the virtual environment:
 ```
 2) source activate sopNMF
 ```
-Install other python package dependencies (go to the root folder of sopNMF):
+Install other python package dependencies (go to the root folder of sopNMF; I only tested the package versions listed in the bash file.):
 ```
 3) ./install_requirements.sh
 ```
@@ -25,10 +25,11 @@ Finally, we need install sopNMF from PyPi:
 4) pip install sopnmf==0.0.1
 ```
 
-### Use sopNMF from command line in a termninal:
+### Use sopNMF from command line in a terminal (go to the root folder of sopNMF):
 ```
 pip install -e .
 ```
+This will allow you to run the software as command line in the terminal.
 
 ### Use sopNMF as a developer version:
 ```
