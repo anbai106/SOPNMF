@@ -22,7 +22,7 @@ Install other python package dependencies (go to the root folder of sopNMF; I on
 ```
 Finally, we need install sopNMF from PyPi:
 ```
-4) pip install sopnmf==0.0.1
+4) pip install sopnmf==0.0.2
 ```
 
 ### Use sopNMF from command line in a terminal (go to the root folder of sopNMF):
