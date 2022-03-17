@@ -104,12 +104,12 @@ def parse_command_line():
     """
 
     parser = argparse.ArgumentParser(
-        prog='SOPNMF',
+        prog='OPNMF',
         description='Orthogonal Projective Non-negative Matrix Factorization for interpretable neuroimaging analysis.')
 
     subparser = parser.add_subparsers(
         title='''Algorithm to run per needs:''',
-        description='''Which algorithm do you want to use with SOPNMF?
+        description='''Which algorithm do you want to use with OPNMF?
             (opnmf, sopnmf, apply_train, apply_test).''',
         dest='algorithm',
         help='''****** Algorithm proposed by OPNMF ******''')
