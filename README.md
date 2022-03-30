@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="./images/sopmf.png" width="150" height="150"/>
+  <img src=".docs/images/sopmf.png" width="150" height="150"/>
 </p>
 
 <h1 align="center">
   <a href="http://www.junhaowen.com/SOPNMF/">
-    <img src="http://www.junhaowen.com/SOPNMF/images/sopnmf.png" alt="SOPNMF Logo" width="120" height="120">
+    <img src="http://www.junhaowen.com/SOPNMF/docs/images/sopnmf.png" alt="SOPNMF Logo" width="120" height="120">
   </a>
   <br/>
   SOPNMF
