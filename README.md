@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="http://www.junhaowen.com/SOPNMF/">Documentation</a> |
-  <a href="http://www.junhaowen.com/SOPNMF/">Paper</a> |
+  <a href="http://www.junhaowen.com/SOPNMF/">Paper</a>
 </p>
 
 ## About the project
