@@ -1,5 +1,5 @@
 <p align="center">
-  <img src=".docs/images/sopmf.png" width="150" height="150"/>
+  <img src="http://www.junhaowen.com/SOPNMF/docs/images/sopnmf.png" width="150" height="150"/>
 </p>
 
 <h1 align="center">
