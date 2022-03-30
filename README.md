@@ -1,8 +1,8 @@
 # `sopNMF`
 **sopNMF** is the python implementation of the Matlab version of Orthogonal Projective Non-negative Matrix Factorization: [brainparts](https://github.com/asotiras/brainparts), and its extension stochastic version (sopNMF) to overcome the memory limitations.
 
-## License
-Copyright (c) 2016 University of Pennsylvania. All rights reserved. Please refer to https://www.cbica.upenn.edu/sbia/software/license.html.
+## !!!
+The documentation of this software is currently under development.
 
 ## Installation
 [Ananconda](https://www.anaconda.com/products/individual) allows you to install, run and update python package and their dependencies. We highly recommend the users to install **Anancond3** on your machine.
