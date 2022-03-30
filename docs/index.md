@@ -1,5 +1,5 @@
 <p align="center">
-  ![SOPNMF](./images/sopmf.gif =50x50)
+  <img src="./images/sopmf.gif" width="50" height="50"/>
 </p>
 
 # SOPNMF documentation
