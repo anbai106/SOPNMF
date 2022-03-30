@@ -3,39 +3,41 @@
 </p>
 
 # SOPNMF documentation
-**sopNMF** is the python implementation of the Matlab version of Orthogonal Projective Non-negative Matrix Factorization: [brainparts](https://github.com/asotiras/brainparts), and its extension stochastic version (sopNMF) to overcome the memory limitations.
-
-## !!!
-> :warning: **The documentation of this software is currently under development**
+SOPNMF is the python implementation of the Matlab version of Orthogonal Projective Non-negative Matrix Factorization: [brainparts](https://github.com/asotiras/brainparts), and its extension stochastic version.
 
 ## Installation
-[Ananconda](https://www.anaconda.com/products/individual) allows you to install, run and update python package and their dependencies. We highly recommend the users to install **Anancond3** on your machine.
-After installing Anaconda3, we provide **three alternative ways** to use sopNMF.
-### Use OPNMF as a python package
-We recommend the users to use Conda virtual environment:
+[Ananconda](https://www.anaconda.com/products/individual) allows you to install, run and update python package and their dependencies. We highly recommend the users to install **Anancond3** on your machine. We also assume that the users should be familiar with command-line operations with the Linux system.
+There exist three ways to use the current software.
+#### Install SOPNMF as a python package
+Please follow the instructions to install SOPNMF as a python package:
 ```
-1) conda create --name sopNMF python=3.6
+i) conda create --name sopNMF python=3.6
 ```
 Activate the virtual environment:
 ```
-2) source activate sopNMF
+ii) source activate sopNMF
 ```
 Install other python package dependencies (go to the root folder of sopNMF; I only tested the package versions listed in the bash file.):
 ```
-3) ./install_requirements.sh
+iii) ./install_requirements.sh
 ```
 Finally, we need install sopNMF from PyPi:
 ```
-4) pip install sopnmf==0.0.2
+iv) pip install sopnmf==0.0.2
 ```
 
-### Use sopNMF from command line in a terminal (go to the root folder of sopNMF):
+#### Use sopNMF from command-line in a terminal
+First, you need to go the root directory of your local repository, and then run:
 ```
 pip install -e .
 ```
-This will allow you to run the software as command line in the terminal.
+This will allow you to run the software as command-line in the terminal. See an example here:
+<p align="center">
+  <img src="./images/commandline.gif" width="150" height="150"/>
+</p>
 
-### Use sopNMF as a developer version:
+#### Use SOPNMF as a developer version
+Advanced users can git clone the package locally and work from the source code:
 ```
 python -m pip install git+https://github.com/anbai106/SOPNMF.git
 ```
@@ -58,7 +60,7 @@ sub-CLNC0008      ses-M00      absolute_path
 
 ## Examples for usage
 
-### First, training the original opNMF model:
+#### First, training the original opNMF model:
 ```
 from sopnmf.opnmf_core import opnmf
 participant_tsv="path_to_participant_tsv"
@@ -71,7 +73,7 @@ verbose = True
 opnmf(participant_tsv, output_dir, tissue_binary_mask, num_component_min, num_component_max, n_threads=n_threads, verbose=verbose)
 ```
 
-### Second, applying the trained model to the training data for post-analyses:
+#### Second, applying the trained model to the training data for post-analyses:
 ```
 from sopnmf.opnmf_post import apply_to_training
 output_dir = "path_output_dir"
@@ -80,7 +82,7 @@ num_component = 2
 apply_to_training(output_dir, num_component, tissue_binary_mask, verbose=True)
 ```
 
-### Last, you may also apply the trained model to unseen test data:
+#### Last, you may also apply the trained model to unseen test data:
 ```
 from sopnmf.opnmf_post import apply_to_test
 participant_tsv="path_to_participant_tsv"
