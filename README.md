@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="http://www.junhaowen.com/SOPNMF/docs/images/sopnmf.png" width="150" height="150"/>
-</p>
-
 <h1 align="center">
   <a href="http://www.junhaowen.com/SOPNMF/">
     <img src="http://www.junhaowen.com/SOPNMF/docs/images/sopnmf.png" alt="SOPNMF Logo" width="120" height="120">
