@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./images/sopmf.gif" width="50" height="50"/>
+  <img src="./images/sopmf.gif" width="150" height="150"/>
 </p>
 
 # SOPNMF documentation
