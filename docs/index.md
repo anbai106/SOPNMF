@@ -1,4 +1,6 @@
-![SOPNMF](./images/sopmf.gif)
+<p align="center">
+  ![SOPNMF](./images/sopmf.gif =50x50)
+</p>
 
 # SOPNMF documentation
 **sopNMF** is the python implementation of the Matlab version of Orthogonal Projective Non-negative Matrix Factorization: [brainparts](https://github.com/asotiras/brainparts), and its extension stochastic version (sopNMF) to overcome the memory limitations.
