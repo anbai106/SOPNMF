@@ -14,7 +14,7 @@
 </p>
 
 ## About the project
-**SOPNMF** is the python implementation of the Matlab version of Orthogonal Projective Non-negative Matrix Factorization: [brainparts](https://github.com/asotiras/brainparts), and its extension stochastic version (sopNMF).
+**SOPNMF** is the python implementation of the Matlab version of Orthogonal Projective Non-negative Matrix Factorization: [brainparts](https://github.com/asotiras/brainparts), and its stochastic extension.
 
 > :warning: **The documentation of this software is currently under development**
 
