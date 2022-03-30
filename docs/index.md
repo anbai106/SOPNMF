@@ -33,7 +33,7 @@ pip install -e .
 ```
 This will allow you to run the software as command-line in the terminal. See an example here:
 <p align="center">
-  <img src="./images/commandline.png" width="150" height="150"/>
+  <img src="./images/commandline.png"/>
 </p>
 
 #### Use SOPNMF as a developer version
@@ -73,7 +73,7 @@ verbose = True
 opnmf(participant_tsv, output_dir, tissue_binary_mask, num_component_min, num_component_max, n_threads=n_threads, verbose=verbose)
 ```
 
-#### Alternatively, if you have a large N, you can train the model with the SOPNMF model to overcome the memory limitations:
+#### Alternatively, if you have a large <em>N</em>, you can train the model with the SOPNMF model to overcome the memory limitations:
 ```
 from sopnmf.opnmf_core import sopnmf
 participant_tsv="path_to_participant_tsv"
