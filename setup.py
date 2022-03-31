@@ -8,7 +8,7 @@ setuptools.setup(
     version="0.0.2",
     author="junhao.wen",
     author_email="junhao.wen89@email.com",
-    description=" Orthogonal Projective Non-negative Matrix Factorization",
+    description="Stochastic Orthogonal Projective Non-negative Matrix Factorization",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/anbai106/SOPNMF",
