@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="sopnmf",
-    version="0.0.2",
+    version="0.0.3",
     author="junhao.wen",
     author_email="junhao.wen89@email.com",
     description="Stochastic Orthogonal Projective Non-negative Matrix Factorization",

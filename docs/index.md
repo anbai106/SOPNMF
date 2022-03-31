@@ -23,7 +23,7 @@ iii) ./install_requirements.sh
 ```
 Finally, we need install sopNMF from PyPi:
 ```
-iv) pip install sopnmf==0.0.2
+iv) pip install sopnmf==0.0.3
 ```
 
 #### Use sopNMF from command-line in a terminal
