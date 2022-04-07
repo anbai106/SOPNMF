@@ -107,6 +107,8 @@ apply_to_test(output_dir, num_component, tissue_binary_mask, participant_tsv, ve
 ```
 
 ## Citing this work
+> Wen, J. et al., **Mega-analysis of brain structural covariance, genetics, and clinical phenotypes**. - [In review](https://www.researchsquare.com/article/rs-1503113/v1)
+
 > Sotiras, A., Resnick, S.M. and Davatzikos, C., 2015. **Finding imaging patterns of structural covariance via non-negative matrix factorization**. Neuroimage, 108, pp.1-16. [doi:10.1016/j.neuroimage.2014.11.045](https://www.sciencedirect.com/science/article/pii/S1053811914009756?via%3Dihub)
 
 ## Publications using SOPNMF
