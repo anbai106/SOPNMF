@@ -1,6 +1,6 @@
 <h1 align="center">
-  <a href="http://www.junhaowen.com/SOPNMF/">
-    <img src="http://www.junhaowen.com/SOPNMF/images/sopnmf.png" alt="SOPNMF Logo" width="120" height="120">
+  <a href="https://anbai106.github.io/SOPNMF/">
+    <img src="https://anbai106.github.io/SOPNMF/images/sopnmf.png" alt="SOPNMF Logo" width="120" height="120">
   </a>
   <br/>
   SOPNMF
@@ -9,8 +9,7 @@
 <p align="center"><strong>Stochastic orthogonally projective non-negative matrix factorization</strong></p>
 
 <p align="center">
-  <a href="http://www.junhaowen.com/SOPNMF/">Documentation</a> |
-  <a href="http://www.junhaowen.com/SOPNMF/">Paper</a>
+  <a href="https://anbai106.github.io/SOPNMF/">Documentation</a>
 </p>
 
 ## About the project
