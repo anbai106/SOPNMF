@@ -1,5 +1,5 @@
 numpy==1.17.2
-scipy==1.3.1
+scipy==1.10.0
 pandas
 nibabel
 tensorboardX
