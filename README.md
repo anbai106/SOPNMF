@@ -20,6 +20,7 @@
 
 > :warning: Please cite the software using the **Cite this repository** button on the right sidebar menu, as well as the original papers below for different tasks...
 
+### Original papers
 > Wen, J., Nasrallah, I.M., Abdulkadir, A., Satterthwaite, T.D., Yang, Z., Erus, G., Robert-Fitzgerald, T., Singh, A., Sotiras, A., Boquet-Pujadas, A. and Mamourian, E., 2023. Genomic loci influence patterns of structural covariance in the human brain. Proceedings of the National Academy of Sciences, 120(52), p.e2300842120. [doi.org/10.1073/pnas.2300842120](https://www.pnas.org/doi/abs/10.1073/pnas.2300842120)
 
 > Sotiras, A., Resnick, S.M. and Davatzikos, C., 2015. **Finding imaging patterns of structural covariance via non-negative matrix factorization**. Neuroimage, 108, pp.1-16. [doi:10.1016/j.neuroimage.2014.11.045](https://www.sciencedirect.com/science/article/pii/S1053811914009756?via%3Dihub)
